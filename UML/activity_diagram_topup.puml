@@ -1,0 +1,60 @@
+@startuml
+title Sales Management - Activity Diagram (Top Up Request + Admin Review)
+
+start
+:Customer mo trang top up request;
+
+if (Da dang nhap?) then (No)
+  :Redirect login;
+  stop
+endif
+
+if (La staff/admin?) then (Yes)
+  :Redirect home;
+  stop
+endif
+
+:Nhap amount va note;
+:Submit form;
+
+if (Format amount hop le?) then (No)
+  :Hien thi loi so tien khong hop le;
+  stop
+endif
+
+if (Amount > 0?) then (No)
+  :Hien thi loi amount phai > 0;
+  stop
+endif
+
+if (Ton tai customer_profile?) then (No)
+  :Thong bao loi, redirect home;
+  stop
+endif
+
+:Tao TopUpRequest(status=PENDING);
+:Thong bao gui yeu cau thanh cong;
+:Redirect wallet;
+
+:Admin vao danh sach top up request;
+
+if (Admin chon Approve?) then (Yes)
+  :Lay request theo id;
+  if (Status != PENDING?) then (Yes)
+    :Thong bao da xu ly truoc do;
+  else (No)
+    :wallet.balance += amount;
+    :TopUpRequest.status = APPROVED;
+    :Thong bao duyet thanh cong;
+  endif
+else (Reject)
+  :Lay request theo id;
+  if (Status != PENDING?) then (Yes)
+    :Thong bao da xu ly truoc do;
+  else (No)
+    :TopUpRequest.status = REJECTED;
+    :Thong bao tu choi thanh cong;
+  endif
+endif
+stop
+@enduml

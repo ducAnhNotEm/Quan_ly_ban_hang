@@ -1,0 +1,118 @@
+@startuml
+title Sales Management - Class Diagram (Synced with Django Code)
+
+skinparam classAttributeIconSize 0
+hide empty members
+
+class User <<Django Auth>> {
+  +id: int
+  +username: string
+  +email: string
+  +password: string
+  +is_staff: bool
+}
+
+
+class Customer {
+  +id: int
+  +fullName: string
+  +phoneNumber: string
+  +address: string?
+  +dateOfBirth: date?
+  +gender: Nam|Nu|Khac
+  +viewBalance(): bigint
+  +createTopUpRequest(amount, note): TopUpRequest
+}
+
+class Wallet {
+  +id: int
+  +balance: bigint
+}
+
+class TopUpRequest {
+  +id: int
+  +amount: bigint
+  +note: text?
+  +status: PENDING|APPROVED|REJECTED
+}
+
+class Product {
+  +id: int
+  +productName: string
+  +category: string
+  +slug: string
+  +description: text?
+  +price: decimal(12,2)
+  +discountPercent: decimal(5,2)
+  +stockQuantity: int
+  +image: ImageField?
+  +created_at: datetime
+  +get_absolute_url(): string
+  +formatted_price: string
+  +discounted_price: decimal
+}
+
+class Cart {
+  +id: int
+  +updatedAt: datetime
+}
+
+class CartItem {
+  +id: int
+  +quantity: int
+  +isSelected: bool
+  +subTotal: decimal
+  +discountAmount: decimal
+}
+
+class DiscountCode {
+  +id: int
+  +code: string (unique)
+  +discountPercent: decimal(5,2)
+  +isActive: bool
+  +validFrom: datetime?
+  +validTo: datetime?
+  +usageLimit: int?
+  +usedCount: int
+  +createdAt: datetime
+}
+
+class Order {
+  +id: int
+  +subTotalAmount: decimal(12,2)
+  +discountAmount: decimal(12,2)
+  +couponCode: string
+  +couponDiscountAmount: decimal(12,2)
+  +totalAmount: decimal(12,2)
+  +status: PAID|CANCELLED
+  +createdAt: datetime
+}
+
+class OrderDetail {
+  +id: int
+  +quantity: int
+  +unitPrice: decimal(12,2)
+  +discountPercent: decimal(5,2)
+  +discountAmount: decimal(12,2)
+  +subTotal: decimal(12,2)
+}
+
+User "1" -- "0..1" Customer : customer_profile
+Customer "1" -- "0..1" Wallet : wallet
+Customer "1" -- "0..*" TopUpRequest : topup_requests
+Customer "1" -- "0..1" Cart : cart
+Cart "1" -- "0..*" CartItem : items
+Product "1" -- "0..*" CartItem : cart_items
+Customer "1" -- "0..*" Order : orders
+Order "1" -- "1..*" OrderDetail : details
+Product "1" -- "0..*" OrderDetail : order_details
+Order ..> DiscountCode : validate code + increment usedCount
+
+
+
+note right of Order
+  Order luu couponCode dang text,
+  khong FK truc tiep toi DiscountCode.
+end note
+
+@enduml

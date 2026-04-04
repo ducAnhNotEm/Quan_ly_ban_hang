@@ -1,0 +1,68 @@
+@startuml
+title Sales Management - Sequence Diagram (Add Cart + Cart Checkout)
+
+actor Customer
+participant "AddToCartView" as AddCart
+participant "CartCheckoutView" as Checkout
+database "Product" as ProductDB
+database "Cart / CartItem" as CartDB
+database "DiscountCode" as DiscountDB
+database "Wallet" as WalletDB
+database "Order / OrderDetail" as OrderDB
+
+== Add product to cart ==
+Customer -> AddCart: POST /cart/add/{product_id}\n(quantity, next)
+AddCart -> ProductDB: get product + check stock
+alt Quantity/stock invalid
+  AddCart --> Customer: Redirect + error message
+else Valid
+  AddCart -> CartDB: get_or_create(cart by customer)
+  AddCart -> CartDB: get_or_create(cart_item by cart+product)
+  AddCart -> CartDB: update quantity, isSelected=true
+  AddCart --> Customer: Redirect (next/cart) + success message
+end
+
+== Checkout selected cart items ==
+Customer -> Checkout: POST /cart/checkout/\n(discount_code optional)
+Checkout -> CartDB: get selected CartItem list
+alt No selected item
+  Checkout --> Customer: Redirect /cart + error
+else Has selected items
+  Checkout -> ProductDB: select_for_update(products in cart)
+  alt Any item out of stock
+    Checkout --> Customer: Redirect /cart + error
+  else Stock is enough
+    Checkout -> Checkout: calculate subtotal/discount/final_total
+
+    opt discount_code provided
+      Checkout -> DiscountDB: select_for_update(code)
+      alt Invalid/inactive/expired/over-usage
+        Checkout --> Customer: Redirect /cart + error
+      end
+    end
+
+    Checkout -> Checkout: to_vnd_integer(final_total)
+    alt Not integer VND
+      Checkout --> Customer: Redirect /cart + error
+    else Integer amount
+      Checkout -> WalletDB: select_for_update(customer wallet)
+      alt Wallet missing or balance not enough
+        Checkout --> Customer: Redirect + error
+      else Wallet is valid
+        Checkout -> OrderDB: create Order(status=PAID, totals, coupon fields)
+        loop each selected item
+          Checkout -> OrderDB: create OrderDetail
+          Checkout -> ProductDB: stockQuantity -= item.quantity
+        end
+        opt discount_code valid
+          Checkout -> DiscountDB: usedCount += 1
+        end
+        Checkout -> WalletDB: balance -= final_total_vnd
+        Checkout -> CartDB: delete paid selected items
+        Checkout --> Customer: Redirect /orders/{id}/ + success
+      end
+    end
+  end
+end
+
+@enduml

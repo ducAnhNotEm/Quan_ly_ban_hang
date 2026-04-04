@@ -1,0 +1,185 @@
+{% load static %}
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Đăng ký - Quản lý bán hàng</title>
+    <link rel="stylesheet" href="{% static 'css/page_theme.css' %}" />
+    <link rel="stylesheet" href="{% static 'css/style.css' %}" />
+  </head>
+  <body>
+    <div class="page-glow page-glow-left" aria-hidden="true"></div>
+    <div class="page-glow page-glow-right" aria-hidden="true"></div>
+
+    <header class="site-header">
+      <div class="container nav-wrap">
+        <a href="{% url 'home' %}" class="logo" aria-label="Sales Management Home">
+          <span class="logo-mark">SM</span>
+          <span class="logo-text">Sales Management</span>
+        </a>
+
+        <nav class="main-nav">
+          <a href="{% url 'home' %}" class="nav-link">Trang chủ</a>
+          <a href="{% url 'login' %}" class="nav-link">Đăng nhập</a>
+          <a href="{% url 'register' %}" class="nav-link">Đăng ký</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="auth-shell">
+      <div class="container">
+        <section class="page-card auth-card">
+          <div class="auth-brand">
+            <h1 class="title">Đăng ký tài khoản</h1>
+            <p>Tạo tài khoản để mua hàng và quản lý thông tin của bạn.</p>
+          </div>
+
+          <form method="post" action="{% url 'register' %}" class="auth-form">
+            {% csrf_token %}
+
+            {% if messages %}
+            <ul class="messages-list">
+              {% for message in messages %}
+              <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+              {% endfor %}
+            </ul>
+            {% endif %}
+
+            {% if form and form.errors %}
+            <ul class="messages-list">
+              {% for field in form %}
+                {% for error in field.errors %}
+              <li class="error">{{ error }}</li>
+                {% endfor %}
+              {% endfor %}
+              {% for error in form.non_field_errors %}
+              <li class="error">{{ error }}</li>
+              {% endfor %}
+            </ul>
+            {% endif %}
+
+            {% with selected_gender=request.POST.gender|default:'Nam' %}
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="username">Tên đăng nhập *</label>
+                <input
+                  type="text"
+                  id="username"
+                  name="username"
+                  value="{{ request.POST.username|default:'' }}"
+                  autocomplete="username"
+                  required
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="full_name">Họ và tên *</label>
+                <input
+                  type="text"
+                  id="full_name"
+                  name="full_name"
+                  value="{{ request.POST.full_name|default:'' }}"
+                  required
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="email">Email *</label>
+                <input
+                  type="email"
+                  id="email"
+                  name="email"
+                  value="{{ request.POST.email|default:'' }}"
+                  autocomplete="email"
+                  required
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="phone_number">Số điện thoại *</label>
+                <input
+                  type="text"
+                  id="phone_number"
+                  name="phone_number"
+                  value="{{ request.POST.phone_number|default:'' }}"
+                  required
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="password1">Mật khẩu *</label>
+                <input
+                  type="password"
+                  id="password1"
+                  name="password1"
+                  autocomplete="new-password"
+                  required
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="password2">Xác nhận mật khẩu *</label>
+                <input
+                  type="password"
+                  id="password2"
+                  name="password2"
+                  autocomplete="new-password"
+                  required
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="address">Địa chỉ</label>
+                <input
+                  type="text"
+                  id="address"
+                  name="address"
+                  value="{{ request.POST.address|default:'' }}"
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="date_of_birth">Ngày sinh</label>
+                <input
+                  type="date"
+                  id="date_of_birth"
+                  name="date_of_birth"
+                  value="{{ request.POST.date_of_birth|default:'' }}"
+                />
+              </div>
+
+              <div class="form-group full-width">
+                <label>Giới tính</label>
+                <div class="gender-group">
+                  <label class="gender-option">
+                    <input type="radio" name="gender" value="Nam" {% if selected_gender == 'Nam' %}checked{% endif %} />
+                    <span>Nam</span>
+                  </label>
+                  <label class="gender-option">
+                    <input type="radio" name="gender" value="Nu" {% if selected_gender == 'Nu' %}checked{% endif %} />
+                    <span>Nữ</span>
+                  </label>
+                  <label class="gender-option">
+                    <input type="radio" name="gender" value="Khac" {% if selected_gender == 'Khac' %}checked{% endif %} />
+                    <span>Khác</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+            {% endwith %}
+
+            <div class="form-actions">
+              <button type="submit" class="btn btn-primary auth-submit">Tạo tài khoản</button>
+            </div>
+          </form>
+
+          <div class="links">
+            Đã có tài khoản? <a href="{% url 'login' %}">Đăng nhập</a>
+          </div>
+        </section>
+      </div>
+    </main>
+  </body>
+</html>

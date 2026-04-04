@@ -1,0 +1,61 @@
+:root {
+  --bg-1: #fff6ea;
+  --bg-2: #fffaf4;
+  --bg-3: #f6fbff;
+  --ink-1: #1f2433;
+  --ink-2: #4f566b;
+  --line: rgba(12, 23, 49, 0.12);
+  --brand: #e36a11;
+  --brand-deep: #b64f06;
+  --accent: #0f6d8f;
+  --card: rgba(255, 255, 255, 0.88);
+  --shadow: 0 24px 64px rgba(16, 24, 40, 0.16);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  color: var(--ink-1);
+  font-family: "Be Vietnam Pro", "IBM Plex Sans", "Segoe UI", sans-serif;
+  background:
+    radial-gradient(1000px 500px at -5% 10%, #ffe2bf 0%, transparent 60%),
+    radial-gradient(1200px 600px at 105% 0%, #dff3ff 0%, transparent 55%),
+    linear-gradient(150deg, var(--bg-1) 0%, var(--bg-2) 45%, var(--bg-3) 100%);
+}
+
+.page-glow {
+  position: fixed;
+  z-index: -1;
+  width: 360px;
+  height: 360px;
+  border-radius: 999px;
+  filter: blur(4px);
+  opacity: 0.5;
+}
+
+.page-glow-left {
+  left: -120px;
+  top: 80px;
+  background: radial-gradient(circle at center, #ffd59b 0%, transparent 68%);
+}
+
+.page-glow-right {
+  right: -120px;
+  top: 120px;
+  background: radial-gradient(circle at center, #bde7ff 0%, transparent 68%);
+}
+
+@media (max-width: 640px) {
+  .page-glow {
+    width: 240px;
+    height: 240px;
+  }
+}
