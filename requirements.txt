@@ -1,2 +1,5 @@
 django==6.0.3
 mysqlclient==2.2.8
+
+Pillow==12.2.0
+
