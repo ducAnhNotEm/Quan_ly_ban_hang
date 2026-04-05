@@ -1,4 +1,4 @@
-{% load static %}
+﻿{% load static %}
 <!doctype html>
 <html lang="vi">
   <head>
@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="robots" content="noindex, nofollow" />
     <title>Đăng ký - Quản lý bán hàng</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="{% static 'css/page_theme.css' %}" />
     <link rel="stylesheet" href="{% static 'css/style.css' %}" />
   </head>
@@ -23,7 +24,6 @@
         <nav class="main-nav">
           <a href="{% url 'home' %}" class="nav-link">Trang chủ</a>
           <a href="{% url 'login' %}" class="nav-link">Đăng nhập</a>
-          <a href="{% url 'register' %}" class="nav-link">Đăng ký</a>
         </nav>
       </div>
     </header>
@@ -183,3 +183,5 @@
     </main>
   </body>
 </html>
+
+

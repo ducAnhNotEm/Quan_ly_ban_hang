@@ -1,15 +1,15 @@
-:root {
-  --bg-1: #fff6ea;
-  --bg-2: #fffaf4;
-  --bg-3: #f6fbff;
-  --ink-1: #1f2433;
-  --ink-2: #4f566b;
-  --line: rgba(12, 23, 49, 0.12);
-  --brand: #e36a11;
-  --brand-deep: #b64f06;
-  --accent: #0f6d8f;
-  --card: rgba(255, 255, 255, 0.88);
-  --shadow: 0 24px 64px rgba(16, 24, 40, 0.16);
+﻿:root {
+  --bg-1: #f8f9fa;
+  --bg-2: #f3f4f5;
+  --bg-3: #eef1ff;
+  --ink-1: #191c1d;
+  --ink-2: #464555;
+  --line: rgba(70, 69, 85, 0.16);
+  --brand: #3525cd;
+  --brand-deep: #4f46e5;
+  --accent: #3525cd;
+  --card: rgba(255, 255, 255, 0.9);
+  --shadow: 0 20px 40px rgba(25, 28, 29, 0.08);
 }
 
 * {
@@ -24,11 +24,19 @@ body {
 body {
   margin: 0;
   color: var(--ink-1);
-  font-family: "Be Vietnam Pro", "IBM Plex Sans", "Segoe UI", sans-serif;
+  font-family: "Inter", "Segoe UI", sans-serif;
   background:
-    radial-gradient(1000px 500px at -5% 10%, #ffe2bf 0%, transparent 60%),
-    radial-gradient(1200px 600px at 105% 0%, #dff3ff 0%, transparent 55%),
+    radial-gradient(900px 460px at -10% 8%, rgba(79, 70, 229, 0.18) 0%, transparent 60%),
+    radial-gradient(1100px 540px at 110% -5%, rgba(53, 37, 205, 0.16) 0%, transparent 58%),
     linear-gradient(150deg, var(--bg-1) 0%, var(--bg-2) 45%, var(--bg-3) 100%);
+}
+
+h1,
+h2,
+h3,
+.title,
+.logo-text {
+  font-family: "Manrope", "Inter", sans-serif;
 }
 
 .page-glow {
@@ -37,20 +45,20 @@ body {
   width: 360px;
   height: 360px;
   border-radius: 999px;
-  filter: blur(4px);
-  opacity: 0.5;
+  filter: blur(6px);
+  opacity: 0.45;
 }
 
 .page-glow-left {
   left: -120px;
   top: 80px;
-  background: radial-gradient(circle at center, #ffd59b 0%, transparent 68%);
+  background: radial-gradient(circle at center, #c3c0ff 0%, transparent 68%);
 }
 
 .page-glow-right {
   right: -120px;
   top: 120px;
-  background: radial-gradient(circle at center, #bde7ff 0%, transparent 68%);
+  background: radial-gradient(circle at center, #d5e0f8 0%, transparent 68%);
 }
 
 @media (max-width: 640px) {

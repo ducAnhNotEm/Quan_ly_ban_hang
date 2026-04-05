@@ -1,0 +1,333 @@
+﻿<!DOCTYPE html>
+<html class="light" lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta content="{{ meta_description }}" name="description" />
+    <title>{{ meta_title }}</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+    <script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-tertiary": "#ffffff",
+              "on-secondary-fixed": "#111c2d",
+              "surface-dim": "#d9dadb",
+              "background": "#f8f9fa",
+              "secondary-fixed": "#d8e3fb",
+              "on-secondary": "#ffffff",
+              "inverse-surface": "#2e3132",
+              "surface-container-low": "#f3f4f5",
+              "on-surface": "#191c1d",
+              "primary-fixed": "#e2dfff",
+              "on-background": "#191c1d",
+              "on-primary-fixed": "#0f0069",
+              "inverse-primary": "#c3c0ff",
+              "on-tertiary-fixed": "#351000",
+              "error-container": "#ffdad6",
+              "inverse-on-surface": "#f0f1f2",
+              "surface-variant": "#e1e3e4",
+              "on-error-container": "#93000a",
+              "surface": "#f8f9fa",
+              "secondary-container": "#d5e0f8",
+              "surface-tint": "#4d44e3",
+              "on-tertiary-container": "#ffd2be",
+              "tertiary-container": "#a44100",
+              "surface-container-lowest": "#ffffff",
+              "on-secondary-container": "#586377",
+              "surface-container": "#edeeef",
+              "primary-container": "#4f46e5",
+              "tertiary-fixed": "#ffdbcc",
+              "error": "#ba1a1a",
+              "on-tertiary-fixed-variant": "#7b2f00",
+              "on-primary": "#ffffff",
+              "surface-bright": "#f8f9fa",
+              "on-primary-fixed-variant": "#3323cc",
+              "outline": "#777587",
+              "on-primary-container": "#dad7ff",
+              "secondary-fixed-dim": "#bcc7de",
+              "surface-container-high": "#e7e8e9",
+              "secondary": "#545f73",
+              "tertiary": "#7e3000",
+              "on-secondary-fixed-variant": "#3c475a",
+              "on-error": "#ffffff",
+              "on-surface-variant": "#464555",
+              "primary": "#3525cd",
+              "outline-variant": "#c7c4d8",
+              "primary-fixed-dim": "#c3c0ff",
+              "tertiary-fixed-dim": "#ffb695",
+              "surface-container-highest": "#e1e3e4"
+            },
+            borderRadius: {
+              DEFAULT: "0.25rem",
+              lg: "1rem",
+              xl: "1.5rem",
+              full: "9999px"
+            },
+            fontFamily: {
+              headline: ["Manrope"],
+              body: ["Inter"],
+              label: ["Inter"]
+            }
+          }
+        }
+      };
+    </script>
+    <style>
+      body { font-family: 'Inter', sans-serif; }
+      h1, h2, h3 { font-family: 'Manrope', sans-serif; }
+      .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+      .glass-nav { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(24px); }
+      .ambient-shadow { box-shadow: 0px 20px 40px rgba(25, 28, 29, 0.06); }
+      .primary-gradient { background: linear-gradient(135deg, #3525cd 0%, #4f46e5 100%); }
+    </style>
+  </head>
+  <body class="bg-background text-on-surface">
+    <nav class="fixed top-0 w-full z-50 glass-nav shadow-sm">
+      <div class="flex justify-between items-center max-w-7xl mx-auto px-6 h-16">
+        <a href="{% url 'home' %}" class="text-xl font-bold tracking-tighter text-indigo-700">Sales Management</a>
+
+        <div class="hidden md:flex items-center space-x-8 font-manrope font-semibold tracking-tight">
+          <a class="text-indigo-600 border-b-2 border-indigo-600 pb-1" href="{% url 'home' %}">Trang chủ</a>
+
+          {% if request.user.is_authenticated %}
+          <a class="text-slate-600 hover:text-indigo-500 transition-all duration-200" href="#topup-history">Yêu cầu nạp tiền</a>
+          {% endif %}
+        </div>
+
+        <div class="flex items-center gap-4">
+          {% if request.user.is_authenticated %}
+          <span class="text-sm text-slate-600 font-medium">Xin chào, {{ request.user.username }}</span>
+          <form method="post" action="{% url 'logout' %}">
+            {% csrf_token %}
+            <button type="submit" class="px-4 py-2 text-red-600 font-semibold hover:opacity-80 transition-all duration-200">Đăng xuất</button>
+          </form>
+          {% else %}
+          <a href="{% url 'login' %}" class="px-4 py-2 text-indigo-600 font-semibold hover:opacity-80 transition-all duration-200">Đăng nhập</a>
+          <a href="{% url 'register' %}" class="px-5 py-2 primary-gradient text-white rounded-xl font-semibold hover:opacity-90 transition-all duration-200 shadow-md">Đăng ký</a>
+          {% endif %}
+        </div>
+      </div>
+    </nav>
+
+    <main class="pt-24">
+      <section class="max-w-7xl mx-auto px-6 py-16">
+        <div class="space-y-8 max-w-4xl">
+          <h1 class="text-5xl md:text-6xl font-extrabold tracking-tight text-on-surface leading-tight">
+            Quản lý bán hàng <span class="text-primary">đơn giản</span>, nhanh và hiệu quả
+          </h1>
+          <p class="text-lg text-on-surface-variant max-w-2xl leading-relaxed">
+            Theo dõi sản phẩm, khách hàng, đơn hàng và lịch sử yêu cầu nạp tiền trên một hệ thống trực quan, dễ sử dụng.
+          </p>
+          <div class="flex flex-wrap gap-4">
+            {% if request.user.is_authenticated %}
+            <a href="#features" class="px-8 py-4 primary-gradient text-white rounded-xl font-bold text-lg hover:opacity-90 transition-all shadow-lg">Xem tính năng</a>
+            <a href="#topup-history" class="px-8 py-4 bg-surface-container-high text-on-surface rounded-xl font-bold text-lg hover:bg-surface-variant transition-all">Xem nạp tiền</a>
+            {% else %}
+            <a href="{% url 'login' %}" class="px-8 py-4 primary-gradient text-white rounded-xl font-bold text-lg hover:opacity-90 transition-all shadow-lg">Bắt đầu ngay</a>
+            <a href="#features" class="px-8 py-4 bg-surface-container-high text-on-surface rounded-xl font-bold text-lg hover:bg-surface-variant transition-all">Xem tính năng</a>
+            {% endif %}
+          </div>
+        </div>
+      </section>
+
+      {% if request.user.is_authenticated and request.user.is_staff %}
+      <section class="bg-surface-container-low py-20">
+        <div class="max-w-7xl mx-auto px-6">
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div class="bg-surface-container-lowest p-8 rounded-lg ambient-shadow border-l-4 border-primary">
+              <div class="flex items-center gap-4 mb-4">
+                <span class="material-symbols-outlined text-primary p-2 bg-primary-fixed rounded-full">inventory_2</span>
+                <span class="font-label text-sm text-on-surface-variant uppercase tracking-wider">Sản phẩm</span>
+              </div>
+              <div class="text-3xl font-extrabold text-on-surface">{{ product_count }}</div>
+            </div>
+
+            <div class="bg-surface-container-lowest p-8 rounded-lg ambient-shadow border-l-4 border-secondary">
+              <div class="flex items-center gap-4 mb-4">
+                <span class="material-symbols-outlined text-secondary p-2 bg-secondary-fixed rounded-full">group</span>
+                <span class="font-label text-sm text-on-surface-variant uppercase tracking-wider">Khách hàng</span>
+              </div>
+              <div class="text-3xl font-extrabold text-on-surface">{{ customer_count }}</div>
+            </div>
+
+            <div class="bg-surface-container-lowest p-8 rounded-lg ambient-shadow border-l-4 border-tertiary">
+              <div class="flex items-center gap-4 mb-4">
+                <span class="material-symbols-outlined text-tertiary p-2 bg-tertiary-fixed rounded-full">shopping_cart</span>
+                <span class="font-label text-sm text-on-surface-variant uppercase tracking-wider">Đơn hàng</span>
+              </div>
+              <div class="text-3xl font-extrabold text-on-surface">{{ order_count }}</div>
+            </div>
+
+            <div class="bg-surface-container-lowest p-8 rounded-lg ambient-shadow border-l-4 border-indigo-500">
+              <div class="flex items-center gap-4 mb-4">
+                <span class="material-symbols-outlined text-indigo-500 p-2 bg-indigo-100 rounded-full">payments</span>
+                <span class="font-label text-sm text-on-surface-variant uppercase tracking-wider">Doanh thu</span>
+              </div>
+              <div class="text-3xl font-extrabold text-on-surface">{{ revenue_display }}</div>
+            </div>
+          </div>
+        </div>
+      </section>
+      {% endif %}
+
+      <section id="features" class="py-24 max-w-7xl mx-auto px-6">
+        <div class="text-center mb-16 space-y-4">
+          <h2 class="text-4xl font-bold tracking-tight">Tính năng mạnh mẽ</h2>
+          <div class="w-20 h-1 primary-gradient mx-auto rounded-full"></div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
+          <div class="p-8 rounded-lg bg-surface border border-outline-variant/10 hover:bg-surface-container-lowest transition-all hover:-translate-y-1 duration-300">
+            <span class="material-symbols-outlined text-primary text-4xl mb-6 block">package_2</span>
+            <h3 class="text-lg font-bold mb-2">Quản lý sản phẩm</h3>
+            <p class="text-sm text-on-surface-variant leading-relaxed">Kho lưu trữ thông minh, phân loại rõ ràng.</p>
+          </div>
+
+          <div class="p-8 rounded-lg bg-surface border border-outline-variant/10 hover:bg-surface-container-lowest transition-all hover:-translate-y-1 duration-300">
+            <span class="material-symbols-outlined text-primary text-4xl mb-6 block">person_search</span>
+            <h3 class="text-lg font-bold mb-2">Quản lý khách hàng</h3>
+            <p class="text-sm text-on-surface-variant leading-relaxed">Lưu trữ thông tin và lịch sử mua sắm chi tiết.</p>
+          </div>
+
+          <div class="p-8 rounded-lg bg-surface border border-outline-variant/10 hover:bg-surface-container-lowest transition-all hover:-translate-y-1 duration-300">
+            <span class="material-symbols-outlined text-primary text-4xl mb-6 block">receipt_long</span>
+            <h3 class="text-lg font-bold mb-2">Quản lý đơn hàng</h3>
+            <p class="text-sm text-on-surface-variant leading-relaxed">Theo dõi trạng thái giao hàng và thanh toán.</p>
+          </div>
+
+          <div class="p-8 rounded-lg bg-surface border border-outline-variant/10 hover:bg-surface-container-lowest transition-all hover:-translate-y-1 duration-300">
+            <span class="material-symbols-outlined text-primary text-4xl mb-6 block">calculate</span>
+            <h3 class="text-lg font-bold mb-2">Tính giảm giá</h3>
+            <p class="text-sm text-on-surface-variant leading-relaxed">Tự động tính tổng tiền và các mức ưu đãi.</p>
+          </div>
+
+          <div class="p-8 rounded-lg bg-surface border border-outline-variant/10 hover:bg-surface-container-lowest transition-all hover:-translate-y-1 duration-300">
+            <span class="material-symbols-outlined text-primary text-4xl mb-6 block">account_balance_wallet</span>
+            <h3 class="text-lg font-bold mb-2">Quản lý ví tiền</h3>
+            <p class="text-sm text-on-surface-variant leading-relaxed">Theo dõi và duyệt yêu cầu nạp tiền tập trung.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="bg-surface-container-highest py-24">
+        <div class="max-w-7xl mx-auto px-6">
+          <div class="text-center mb-16">
+            <h2 class="text-4xl font-bold tracking-tight">Cách hệ thống hoạt động</h2>
+            <p class="text-on-surface-variant mt-4">Quy trình 4 bước đơn giản để bắt đầu</p>
+          </div>
+
+          <div class="relative grid grid-cols-1 md:grid-cols-4 gap-12">
+            <div class="relative flex flex-col items-center text-center">
+              <div class="w-16 h-16 rounded-full primary-gradient text-white flex items-center justify-center text-2xl font-bold mb-6 z-10">1</div>
+              <h3 class="text-lg font-bold mb-2">Thêm sản phẩm</h3>
+              <p class="text-sm text-on-surface-variant">Cập nhật danh mục hàng hóa vào hệ thống.</p>
+            </div>
+            <div class="relative flex flex-col items-center text-center">
+              <div class="w-16 h-16 rounded-full primary-gradient text-white flex items-center justify-center text-2xl font-bold mb-6 z-10">2</div>
+              <h3 class="text-lg font-bold mb-2">Tạo khách hàng</h3>
+              <p class="text-sm text-on-surface-variant">Lưu thông tin liên hệ và địa chỉ giao hàng.</p>
+            </div>
+            <div class="relative flex flex-col items-center text-center">
+              <div class="w-16 h-16 rounded-full primary-gradient text-white flex items-center justify-center text-2xl font-bold mb-6 z-10">3</div>
+              <h3 class="text-lg font-bold mb-2">Lập đơn hàng</h3>
+              <p class="text-sm text-on-surface-variant">Chọn sản phẩm và khách hàng để khởi tạo đơn.</p>
+            </div>
+            <div class="relative flex flex-col items-center text-center">
+              <div class="w-16 h-16 rounded-full primary-gradient text-white flex items-center justify-center text-2xl font-bold mb-6 z-10">4</div>
+              <h3 class="text-lg font-bold mb-2">Duyệt nạp tiền</h3>
+              <p class="text-sm text-on-surface-variant">Theo dõi yêu cầu nạp và xử lý trạng thái nhanh.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {% if request.user.is_authenticated %}
+      <section id="topup-history" class="py-24 max-w-7xl mx-auto px-6">
+        <div class="text-center mb-12">
+          <h2 class="text-4xl font-bold tracking-tight">{{ topup_section_title }}</h2>
+        </div>
+        <div class="overflow-x-auto rounded-xl ambient-shadow">
+          <table class="w-full text-left bg-surface-container-lowest">
+            <thead class="bg-surface-container text-on-surface-variant border-b border-outline-variant/10">
+              <tr>
+                <th class="px-6 py-4 font-semibold">Mã yêu cầu</th>
+                <th class="px-6 py-4 font-semibold">Khách hàng</th>
+                <th class="px-6 py-4 font-semibold">Tài khoản</th>
+                <th class="px-6 py-4 font-semibold">Số tiền</th>
+                <th class="px-6 py-4 font-semibold">Ghi chú</th>
+                <th class="px-6 py-4 font-semibold">Trạng thái</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-outline-variant/10">
+              {% for req in topup_requests %}
+              <tr class="hover:bg-surface-container-low transition-colors">
+                <td class="px-6 py-4 font-medium">#TOPUP-{{ req.id }}</td>
+                <td class="px-6 py-4">{{ req.full_name }}</td>
+                <td class="px-6 py-4">{{ req.username }}</td>
+                <td class="px-6 py-4">{{ req.amount }} đ</td>
+                <td class="px-6 py-4 text-on-surface-variant">{{ req.note|default:"-" }}</td>
+                <td class="px-6 py-4">
+                  {% if req.status == "APPROVED" %}
+                  <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-bold uppercase">Đã duyệt</span>
+                  {% elif req.status == "REJECTED" %}
+                  <span class="px-3 py-1 bg-red-100 text-red-700 rounded-full text-xs font-bold uppercase">Từ chối</span>
+                  {% else %}
+                  <span class="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-bold uppercase">Đang chờ</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td class="px-6 py-8 text-center text-on-surface-variant" colspan="6">{{ topup_empty_message }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+      {% endif %}
+
+      <section class="max-w-7xl mx-auto px-6 py-20 mb-20">
+        <div class="primary-gradient rounded-xl p-12 text-center text-white space-y-8 relative overflow-hidden shadow-2xl">
+          <div class="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
+          <h2 class="text-4xl md:text-5xl font-extrabold relative z-10">Sẵn sàng quản lý bán hàng chuyên nghiệp hơn?</h2>
+          <p class="text-white/80 text-xl max-w-2xl mx-auto relative z-10">Gia nhập cùng hệ thống để tối ưu vận hành sản phẩm, đơn hàng và ví tiền khách hàng.</p>
+          <div class="flex flex-wrap justify-center gap-6 relative z-10">
+            {% if request.user.is_authenticated %}
+            <a href="#topup-history" class="px-10 py-4 bg-white text-primary rounded-xl font-bold text-lg hover:bg-opacity-90 transition-all">{% if request.user.is_staff %}Xem yêu cầu nạp tiền{% else %}Xem lịch sử nạp tiền{% endif %}</a>
+            <a href="#features" class="px-10 py-4 border-2 border-white text-white rounded-xl font-bold text-lg hover:bg-white/10 transition-all">Xem tính năng</a>
+            {% else %}
+            <a href="{% url 'login' %}" class="px-10 py-4 bg-white text-primary rounded-xl font-bold text-lg hover:bg-opacity-90 transition-all">Đăng nhập hệ thống</a>
+            <a href="{% url 'register' %}" class="px-10 py-4 border-2 border-white text-white rounded-xl font-bold text-lg hover:bg-white/10 transition-all">Tạo tài khoản</a>
+            {% endif %}
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="w-full border-t border-slate-200 bg-slate-50">
+      <div class="max-w-7xl mx-auto py-12 px-6 flex flex-col md:flex-row justify-between items-center gap-6">
+        <div class="font-manrope font-bold text-slate-900 text-xl">Sales Management</div>
+        <div class="flex gap-8 font-inter text-sm text-slate-500">
+          <a class="text-slate-500 hover:text-indigo-500 transition-opacity underline decoration-indigo-500/30 underline-offset-4" href="{% url 'home' %}">Trang chủ</a>
+          {% if request.user.is_authenticated %}
+          <a class="text-slate-500 hover:text-indigo-500 transition-opacity underline decoration-indigo-500/30 underline-offset-4" href="#topup-history">Yêu cầu nạp tiền</a>
+          {% else %}
+          <a class="text-slate-500 hover:text-indigo-500 transition-opacity underline decoration-indigo-500/30 underline-offset-4" href="{% url 'login' %}">Đăng nhập</a>
+          <a class="text-slate-500 hover:text-indigo-500 transition-opacity underline decoration-indigo-500/30 underline-offset-4" href="{% url 'register' %}">Đăng ký</a>
+          {% endif %}
+        </div>
+        <p class="font-inter text-sm text-slate-500">© 2026 Sales Management System - Dự án học tập</p>
+      </div>
+    </footer>
+  </body>
+</html>
+
+
+
+

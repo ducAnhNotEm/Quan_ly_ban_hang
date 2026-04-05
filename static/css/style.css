@@ -1,4 +1,4 @@
-.container {
+﻿.container {
   width: min(1060px, calc(100% - 2rem));
   margin: 0 auto;
 }
@@ -7,8 +7,8 @@
   position: sticky;
   top: 0;
   z-index: 10;
-  backdrop-filter: blur(8px);
-  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(24px);
+  background: rgba(255, 255, 255, 0.8);
   border-bottom: 1px solid var(--line);
 }
 
@@ -36,12 +36,12 @@
   place-items: center;
   font-weight: 700;
   color: #fff;
-  background: linear-gradient(140deg, var(--brand) 0%, #f39a4f 100%);
-  box-shadow: 0 8px 20px rgba(227, 106, 17, 0.35);
+  background: linear-gradient(140deg, var(--brand) 0%, var(--brand-deep) 100%);
+  box-shadow: 0 8px 20px rgba(53, 37, 205, 0.3);
 }
 
 .logo-text {
-  font-weight: 700;
+  font-weight: 800;
   letter-spacing: 0.2px;
 }
 
@@ -54,15 +54,15 @@
 .nav-link {
   text-decoration: none;
   color: var(--ink-2);
-  font-weight: 500;
+  font-weight: 600;
   padding: 0.45rem 0.7rem;
   border-radius: 8px;
   transition: all 0.2s ease;
 }
 
 .nav-link:hover {
-  color: var(--ink-1);
-  background: rgba(15, 109, 143, 0.1);
+  color: var(--brand);
+  background: rgba(53, 37, 205, 0.1);
 }
 
 .auth-shell {
@@ -71,7 +71,7 @@
 
 .page-card {
   background: var(--card);
-  border: 1px solid rgba(255, 255, 255, 0.45);
+  border: 1px solid rgba(199, 196, 216, 0.7);
   border-radius: 22px;
   box-shadow: var(--shadow);
 }
@@ -90,6 +90,7 @@
   margin: 0;
   font-size: clamp(1.4rem, 2vw, 2rem);
   line-height: 1.2;
+  color: var(--ink-1);
 }
 
 .auth-brand p {
@@ -126,20 +127,20 @@ input[type="text"],
 input[type="email"],
 input[type="password"],
 input[type="date"] {
-  border: 1px solid rgba(31, 36, 51, 0.2);
+  border: 1px solid rgba(70, 69, 85, 0.28);
   border-radius: 10px;
   height: 42px;
   padding: 0 0.75rem;
   font-size: 0.95rem;
-  background: rgba(255, 255, 255, 0.96);
+  background: rgba(255, 255, 255, 0.97);
   color: var(--ink-1);
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 input:focus {
   outline: none;
-  border-color: rgba(15, 109, 143, 0.7);
-  box-shadow: 0 0 0 3px rgba(15, 109, 143, 0.15);
+  border-color: rgba(79, 70, 229, 0.72);
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.16);
 }
 
 .gender-group {
@@ -154,9 +155,9 @@ input:focus {
   align-items: center;
   gap: 0.4rem;
   padding: 0.5rem 0.75rem;
-  border: 1px solid rgba(31, 36, 51, 0.2);
+  border: 1px solid rgba(70, 69, 85, 0.24);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.72);
+  background: rgba(255, 255, 255, 0.78);
 }
 
 .form-actions {
@@ -178,8 +179,8 @@ input:focus {
 
 .btn-primary {
   color: #fff;
-  background: linear-gradient(140deg, var(--brand) 0%, var(--brand-deep) 100%);
-  box-shadow: 0 10px 22px rgba(227, 106, 17, 0.34);
+  background: linear-gradient(135deg, var(--brand) 0%, var(--brand-deep) 100%);
+  box-shadow: 0 10px 22px rgba(53, 37, 205, 0.32);
 }
 
 .auth-submit {

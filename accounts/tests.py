@@ -1,8 +1,9 @@
-from datetime import date
+﻿from datetime import date
 
 from django.contrib.auth import get_user_model
 from django.db import IntegrityError
 from django.test import TestCase
+from django.urls import reverse
 
 from accounts.models import Customer, TopUpRequest, Wallet
 
@@ -82,3 +83,170 @@ class AccountsModelTests(TestCase):
 
         self.assertEqual(Wallet.objects.count(), 0)
         self.assertEqual(TopUpRequest.objects.count(), 0)
+
+
+class LoginViewTests(TestCase):
+    def test_staff_login_redirects_home(self):
+        staff_user = get_user_model().objects.create_user(
+            username="admin01",
+            email="admin@example.com",
+            password="testpass123",
+            is_staff=True,
+        )
+
+        response = self.client.post(
+            reverse("login"),
+            data={"username": "admin01", "password": "testpass123"},
+        )
+
+        self.assertRedirects(response, reverse("home"))
+        self.assertTrue("_auth_user_id" in self.client.session)
+        self.assertEqual(int(self.client.session["_auth_user_id"]), staff_user.id)
+
+    def test_admin_and_dashboard_routes_return_404(self):
+        response_admin = self.client.get("/admin/")
+        response_dashboard = self.client.get("/admin-dashboard/")
+
+        self.assertEqual(response_admin.status_code, 404)
+        self.assertEqual(response_dashboard.status_code, 404)
+
+
+class RegisterViewTests(TestCase):
+    def test_register_missing_required_fields_shows_errors(self):
+        response = self.client.post(reverse("register"), data={})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Vui long nhap ten dang nhap.")
+        self.assertContains(response, "Vui long nhap ho va ten.")
+        self.assertContains(response, "Vui long nhap email.")
+        self.assertContains(response, "Vui long nhap so dien thoai.")
+
+    def test_register_password_mismatch_shows_error(self):
+        response = self.client.post(
+            reverse("register"),
+            data={
+                "username": "newuser",
+                "full_name": "New User",
+                "email": "newuser@example.com",
+                "phone_number": "0900001234",
+                "password1": "pass123456",
+                "password2": "pass1234567",
+                "gender": "Nam",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Mat khau xac nhan khong khop.")
+
+    def test_register_success_creates_user_customer_wallet_and_redirects(self):
+        response = self.client.post(
+            reverse("register"),
+            data={
+                "username": "newuser",
+                "full_name": "New User",
+                "email": "newuser@example.com",
+                "phone_number": "0900001234",
+                "password1": "pass123456",
+                "password2": "pass123456",
+                "address": "HCM",
+                "date_of_birth": "2000-01-02",
+                "gender": "Nu",
+            },
+        )
+
+        self.assertRedirects(response, reverse("login"))
+
+        user = get_user_model().objects.get(username="newuser")
+        customer = Customer.objects.get(user=user)
+
+        self.assertEqual(user.email, "newuser@example.com")
+        self.assertEqual(customer.full_name, "New User")
+        self.assertEqual(customer.gender, Customer.Gender.FEMALE)
+        self.assertTrue(Wallet.objects.filter(customer=customer).exists())
+
+class LogoutViewTests(TestCase):
+    def test_logout_clears_session_and_redirects_home(self):
+        user = get_user_model().objects.create_user(
+            username="logout_user",
+            email="logout@example.com",
+            password="testpass123",
+        )
+        self.client.force_login(user)
+
+        response = self.client.post(reverse("logout"))
+
+        self.assertRedirects(response, reverse("home"))
+        self.assertNotIn("_auth_user_id", self.client.session)
+
+
+class HomeTopupSectionTests(TestCase):
+    def setUp(self):
+        user_model = get_user_model()
+
+        self.staff_user = user_model.objects.create_user(
+            username="staff_home",
+            email="staff_home@example.com",
+            password="testpass123",
+            is_staff=True,
+        )
+
+        self.customer_user = user_model.objects.create_user(
+            username="customer_home",
+            email="customer_home@example.com",
+            password="testpass123",
+        )
+        self.other_user = user_model.objects.create_user(
+            username="other_home",
+            email="other_home@example.com",
+            password="testpass123",
+        )
+
+        customer = Customer.objects.create(
+            user=self.customer_user,
+            full_name="Customer Home",
+            phone_number="0900111000",
+        )
+        other_customer = Customer.objects.create(
+            user=self.other_user,
+            full_name="Other Home",
+            phone_number="0900222000",
+        )
+
+        TopUpRequest.objects.create(
+            customer=customer,
+            amount=100000,
+            note="PENDING_NOTE",
+            status=TopUpRequest.Status.PENDING,
+        )
+        TopUpRequest.objects.create(
+            customer=customer,
+            amount=120000,
+            note="APPROVED_NOTE",
+            status=TopUpRequest.Status.APPROVED,
+        )
+        TopUpRequest.objects.create(
+            customer=other_customer,
+            amount=130000,
+            note="OTHER_USER_NOTE",
+            status=TopUpRequest.Status.PENDING,
+        )
+
+    def test_admin_sees_topup_requests_only(self):
+        self.client.force_login(self.staff_user)
+
+        response = self.client.get(reverse("home"))
+
+        self.assertContains(response, "Yêu cầu nạp tiền")
+        self.assertContains(response, "PENDING_NOTE")
+        self.assertContains(response, "OTHER_USER_NOTE")
+        self.assertNotContains(response, "APPROVED_NOTE")
+
+    def test_customer_sees_own_topup_history(self):
+        self.client.force_login(self.customer_user)
+
+        response = self.client.get(reverse("home"))
+
+        self.assertContains(response, "Lịch sử yêu cầu nạp tiền")
+        self.assertContains(response, "PENDING_NOTE")
+        self.assertContains(response, "APPROVED_NOTE")
+        self.assertNotContains(response, "OTHER_USER_NOTE")
