@@ -27,6 +27,13 @@ class OrdersModelTests(TestCase):
             price=Decimal("30000.00"),
             stock_quantity=100,
         )
+        self.product_2 = Product.objects.create(
+            product_name="Tra dao",
+            category="Do uong",
+            slug="tra-dao",
+            price=Decimal("50000.00"),
+            stock_quantity=100,
+        )
 
     def test_order_defaults(self):
         order = Order.objects.create(customer=self.customer)
@@ -57,6 +64,71 @@ class OrdersModelTests(TestCase):
         self.assertEqual(order.details.count(), 1)
         self.assertEqual(self.product.order_details.count(), 1)
         self.assertEqual(detail.quantity, 2)
+
+    def test_order_detail_auto_calculates_amounts(self):
+        order = Order.objects.create(customer=self.customer)
+
+        detail = OrderDetail.objects.create(
+            order=order,
+            product=self.product,
+            quantity=2,
+            unit_price=Decimal("30000.00"),
+            discount_percent=Decimal("10.00"),
+        )
+
+        self.assertEqual(detail.discount_amount, Decimal("6000.00"))
+        self.assertEqual(detail.sub_total, Decimal("54000.00"))
+
+    def test_recalculate_order_totals_from_details(self):
+        order = Order.objects.create(
+            customer=self.customer,
+            coupon_code="SALE5K",
+            coupon_discount_amount=Decimal("5000.00"),
+        )
+
+        OrderDetail.objects.create(
+            order=order,
+            product=self.product,
+            quantity=2,
+            unit_price=Decimal("30000.00"),
+            discount_percent=Decimal("10.00"),
+        )
+        OrderDetail.objects.create(
+            order=order,
+            product=self.product_2,
+            quantity=1,
+            unit_price=Decimal("50000.00"),
+            discount_percent=Decimal("0.00"),
+        )
+
+        order.recalculate_totals()
+        order.refresh_from_db()
+
+        self.assertEqual(order.sub_total_amount, Decimal("110000.00"))
+        self.assertEqual(order.discount_amount, Decimal("6000.00"))
+        self.assertEqual(order.total_amount, Decimal("99000.00"))
+
+    def test_recalculate_order_total_not_negative(self):
+        order = Order.objects.create(
+            customer=self.customer,
+            coupon_code="SALE200K",
+            coupon_discount_amount=Decimal("200000.00"),
+        )
+
+        OrderDetail.objects.create(
+            order=order,
+            product=self.product,
+            quantity=1,
+            unit_price=Decimal("30000.00"),
+            discount_percent=Decimal("0.00"),
+        )
+
+        order.recalculate_totals()
+        order.refresh_from_db()
+
+        self.assertEqual(order.sub_total_amount, Decimal("30000.00"))
+        self.assertEqual(order.discount_amount, Decimal("0.00"))
+        self.assertEqual(order.total_amount, Decimal("0.00"))
 
     def test_delete_order_cascades_order_details(self):
         order = Order.objects.create(customer=self.customer)

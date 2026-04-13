@@ -1,0 +1,327 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin - Thêm sản phẩm</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+      rel="stylesheet"
+    />
+    <link href="{% static 'css/home.css' %}" rel="stylesheet" />
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              headline: ["Plus Jakarta Sans", "sans-serif"],
+              body: ["Manrope", "sans-serif"],
+            },
+          },
+        },
+      };
+    </script>
+  </head>
+  <body class="bg-slate-50 text-slate-900 font-body antialiased">
+    <header class="fixed top-0 z-50 w-full bg-white/80 shadow-sm glass-nav">
+      <div class="mx-auto flex w-full max-w-[1600px] items-center justify-between px-8 py-4">
+        <div class="flex items-center gap-8">
+          <a class="text-2xl font-headline font-extrabold tracking-tight text-indigo-900" href="{% url 'home' %}">
+            Sales Store
+          </a>
+          <nav class="hidden items-center gap-6 md:flex">
+            <a class="text-sm text-slate-600 transition-colors hover:text-indigo-600" href="{% url 'home' %}">
+              Trang chủ
+            </a>
+            <a class="border-b-2 border-indigo-600 py-1 text-sm font-semibold text-indigo-700" href="{% url 'products:admin_product_create' %}">
+              Admin thêm sản phẩm
+            </a>
+            {% if request.user.is_authenticated and not request.user.is_staff %}
+            <a class="text-sm text-slate-600 transition-colors hover:text-indigo-600" href="#">
+              Giỏ hàng
+            </a>
+            {% endif %}
+          </nav>
+        </div>
+        <div class="flex items-center gap-3">
+          {% if request.user.is_authenticated and not request.user.is_staff %}
+          <button class="rounded-full p-2 text-slate-600 transition-colors hover:bg-slate-100" type="button">
+            <span class="material-symbols-outlined">shopping_cart</span>
+          </button>
+          {% endif %}
+          {% if request.user.is_authenticated %}
+          <a
+            class="rounded-full bg-slate-100 px-4 py-2 text-sm font-semibold text-indigo-900 transition-colors hover:bg-indigo-50"
+            href="{% url 'logout' %}"
+          >
+            Đăng xuất
+          </a>
+          {% else %}
+          <a
+            class="rounded-full bg-slate-100 px-4 py-2 text-sm font-semibold text-indigo-900 transition-colors hover:bg-indigo-50"
+            href="{% url 'login' %}"
+          >
+            Đăng nhập
+          </a>
+          {% endif %}
+        </div>
+      </div>
+    </header>
+
+    <main class="mx-auto max-w-[1600px] px-8 pb-20 pt-28">
+      <nav class="mb-8 flex items-center gap-2 text-sm text-slate-500">
+        <a class="hover:text-indigo-600" href="{% url 'home' %}">Trang chủ</a>
+        <span class="material-symbols-outlined text-sm">chevron_right</span>
+        <span>Admin thêm sản phẩm</span>
+      </nav>
+
+      <section class="mb-8 rounded-2xl bg-gradient-to-r from-indigo-700 to-indigo-500 px-8 py-10 text-white">
+        <h1 class="font-headline text-3xl font-extrabold md:text-4xl">Tạo sản phẩm mới</h1>
+        <p class="mt-3 max-w-3xl text-indigo-100">
+          Form dành cho admin: nhập thông tin sản phẩm, chọn ảnh chính và tối đa 6 ảnh phụ để chuẩn bị hiển thị.
+        </p>
+      </section>
+
+      <section class="rounded-2xl bg-white p-8 shadow-sm">
+        <form class="space-y-8" method="post" enctype="multipart/form-data">
+          {% csrf_token %}
+
+          <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+            <div class="md:col-span-2">
+              <label class="mb-2 block text-sm font-bold text-slate-700" for="product_name">Tên sản phẩm</label>
+              <input
+                class="w-full rounded-xl border-slate-200 bg-white px-4 py-3 focus:border-indigo-400 focus:ring-indigo-200"
+                id="product_name"
+                name="product_name"
+                type="text"
+                maxlength="255"
+                placeholder="Ví dụ: Bàn phím cơ không dây..."
+                required
+              />
+            </div>
+
+            <div>
+              <label class="mb-2 block text-sm font-bold text-slate-700" for="category">Thể loại</label>
+              <input
+                class="w-full rounded-xl border-slate-200 bg-white px-4 py-3 focus:border-indigo-400 focus:ring-indigo-200"
+                id="category"
+                name="category"
+                type="text"
+                list="category-list"
+                placeholder="Chọn hoặc nhập thể loại mới"
+                required
+              />
+              <datalist id="category-list">
+                {% for category in category_options %}
+                <option value="{{ category }}"></option>
+                {% endfor %}
+              </datalist>
+            </div>
+
+            <div>
+              <label class="mb-2 block text-sm font-bold text-slate-700" for="stock_quantity">Số lượng</label>
+              <input
+                class="w-full rounded-xl border-slate-200 bg-white px-4 py-3 focus:border-indigo-400 focus:ring-indigo-200"
+                id="stock_quantity"
+                name="stock_quantity"
+                type="number"
+                min="0"
+                step="1"
+                placeholder="0"
+                required
+              />
+            </div>
+
+            <div>
+              <label class="mb-2 block text-sm font-bold text-slate-700" for="price">Giá cả (VND)</label>
+              <input
+                class="w-full rounded-xl border-slate-200 bg-white px-4 py-3 focus:border-indigo-400 focus:ring-indigo-200"
+                id="price"
+                name="price"
+                type="number"
+                min="0"
+                step="1000"
+                placeholder="1000000"
+                required
+              />
+            </div>
+
+            <div>
+              <label class="mb-2 block text-sm font-bold text-slate-700" for="main_image">Hình ảnh chính</label>
+              <input
+                class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm file:mr-4 file:rounded-lg file:border-0 file:bg-indigo-50 file:px-4 file:py-2 file:font-semibold file:text-indigo-700 hover:file:bg-indigo-100"
+                id="main_image"
+                name="main_image"
+                type="file"
+                accept="image/*"
+                required
+              />
+              <p class="mt-2 text-xs text-slate-500">Khuyến nghị tỉ lệ 1:1 hoặc 4:3 để hiển thị đẹp trên danh sách.</p>
+            </div>
+
+            <div class="md:col-span-2">
+              <label class="mb-2 block text-sm font-bold text-slate-700" for="gallery_images">
+                Ảnh phụ của sản phẩm (tối đa 6 ảnh)
+              </label>
+              <input
+                class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm file:mr-4 file:rounded-lg file:border-0 file:bg-indigo-50 file:px-4 file:py-2 file:font-semibold file:text-indigo-700 hover:file:bg-indigo-100"
+                id="gallery_images"
+                name="gallery_images"
+                type="file"
+                accept="image/*"
+                multiple
+              />
+              <p id="gallery-error" class="mt-2 hidden text-sm font-semibold text-red-600">Chỉ được chọn tối đa 6 ảnh phụ.</p>
+            </div>
+
+            <div class="md:col-span-2">
+              <label class="mb-2 block text-sm font-bold text-slate-700" for="description">Mô tả sản phẩm</label>
+              <textarea
+                class="min-h-[140px] w-full rounded-xl border-slate-200 bg-white px-4 py-3 focus:border-indigo-400 focus:ring-indigo-200"
+                id="description"
+                name="description"
+                placeholder="Nhập mô tả chi tiết về sản phẩm, thông số, lợi ích..."
+              ></textarea>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+            <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <p class="mb-3 text-sm font-bold text-slate-700">Xem trước ảnh chính</p>
+              <div class="flex aspect-video items-center justify-center overflow-hidden rounded-lg border-2 border-dashed border-slate-200 bg-white">
+                <img id="main-preview" alt="Main preview" class="hidden h-full w-full object-cover" />
+                <span id="main-placeholder" class="text-sm text-slate-400">Chưa chọn ảnh chính</span>
+              </div>
+            </div>
+
+            <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <p class="mb-3 text-sm font-bold text-slate-700">Xem trước ảnh phụ</p>
+              <div id="gallery-preview" class="grid grid-cols-3 gap-3">
+                <div class="col-span-3 rounded-lg border-2 border-dashed border-slate-200 bg-white p-6 text-center text-sm text-slate-400">
+                  Chưa có ảnh phụ
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap gap-3">
+            <button
+              class="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-6 py-3 text-sm font-bold text-white transition-colors hover:bg-indigo-700"
+              type="submit"
+            >
+              Lưu sản phẩm
+            </button>
+            <button
+              class="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-6 py-3 text-sm font-bold text-slate-600 transition-colors hover:bg-slate-100"
+              type="reset"
+            >
+              Làm mới form
+            </button>
+          </div>
+        </form>
+      </section>
+    </main>
+
+    <footer class="border-t border-slate-200 bg-white">
+      <div class="mx-auto grid max-w-[1600px] grid-cols-1 gap-8 px-8 py-12 md:grid-cols-4">
+        <div>
+          <p class="font-headline text-lg font-bold text-indigo-900">Sales Store</p>
+          <p class="mt-3 text-sm leading-relaxed text-slate-500">Nền tảng quản lý bán hàng và trưng bày sản phẩm.</p>
+        </div>
+        <div>
+          <p class="mb-3 text-sm font-bold text-slate-900">Điều hướng</p>
+          <ul class="space-y-2 text-sm text-slate-500">
+            <li><a class="hover:text-indigo-600" href="{% url 'home' %}">Trang chủ</a></li>
+            <li><a class="hover:text-indigo-600" href="{% url 'products:admin_product_create' %}">Thêm sản phẩm</a></li>
+            <li><a class="hover:text-indigo-600" href="{% url 'products:detail_preview' %}">Xem preview</a></li>
+          </ul>
+        </div>
+        <div>
+          <p class="mb-3 text-sm font-bold text-slate-900">Hỗ trợ</p>
+          <ul class="space-y-2 text-sm text-slate-500">
+            <li><a class="hover:text-indigo-600" href="#">Chính sách bảo mật</a></li>
+            <li><a class="hover:text-indigo-600" href="#">Điều khoản dịch vụ</a></li>
+            <li><a class="hover:text-indigo-600" href="#">Liên hệ</a></li>
+          </ul>
+        </div>
+        <div>
+          <p class="mb-3 text-sm font-bold text-slate-900">Kết nối</p>
+          <div class="flex gap-3">
+            <button class="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200" type="button">
+              <span class="material-symbols-outlined text-sm">public</span>
+            </button>
+            <button class="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200" type="button">
+              <span class="material-symbols-outlined text-sm">share</span>
+            </button>
+            <button class="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200" type="button">
+              <span class="material-symbols-outlined text-sm">mail</span>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="border-t border-slate-100 px-8 py-6 text-center text-xs text-slate-400">© 2026 Sales Store</div>
+    </footer>
+
+    <script>
+      const mainInput = document.getElementById("main_image");
+      const galleryInput = document.getElementById("gallery_images");
+      const mainPreview = document.getElementById("main-preview");
+      const mainPlaceholder = document.getElementById("main-placeholder");
+      const galleryPreview = document.getElementById("gallery-preview");
+      const galleryError = document.getElementById("gallery-error");
+
+      mainInput.addEventListener("change", () => {
+        const file = mainInput.files && mainInput.files[0];
+        if (!file) {
+          mainPreview.classList.add("hidden");
+          mainPlaceholder.classList.remove("hidden");
+          mainPreview.removeAttribute("src");
+          return;
+        }
+        mainPreview.src = URL.createObjectURL(file);
+        mainPreview.classList.remove("hidden");
+        mainPlaceholder.classList.add("hidden");
+      });
+
+      galleryInput.addEventListener("change", () => {
+        const files = Array.from(galleryInput.files || []);
+        galleryPreview.innerHTML = "";
+
+        if (files.length > 6) {
+          galleryError.classList.remove("hidden");
+          galleryInput.value = "";
+          galleryPreview.innerHTML =
+            '<div class="col-span-3 rounded-lg border-2 border-dashed border-slate-200 bg-white p-6 text-center text-sm text-slate-400">Chưa có ảnh phụ</div>';
+          return;
+        }
+
+        galleryError.classList.add("hidden");
+
+        if (!files.length) {
+          galleryPreview.innerHTML =
+            '<div class="col-span-3 rounded-lg border-2 border-dashed border-slate-200 bg-white p-6 text-center text-sm text-slate-400">Chưa có ảnh phụ</div>';
+          return;
+        }
+
+        files.forEach((file) => {
+          const cell = document.createElement("div");
+          cell.className = "aspect-square overflow-hidden rounded-lg border border-slate-200 bg-white";
+
+          const img = document.createElement("img");
+          img.src = URL.createObjectURL(file);
+          img.alt = file.name;
+          img.className = "h-full w-full object-cover";
+
+          cell.appendChild(img);
+          galleryPreview.appendChild(cell);
+        });
+      });
+    </script>
+  </body>
+</html>
