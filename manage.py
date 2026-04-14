@@ -1,11 +1,19 @@
-#!/usr/bin/env python
-"""Django's command-line utility for administrative tasks."""
+﻿#!/usr/bin/env python
+"""Tiện ích dòng lệnh của Django cho các tác vụ quản trị."""
 import os
 import sys
 
 
 def main():
-    """Run administrative tasks."""
+    """
+    Chạy lệnh Django theo tham số từ dòng lệnh.
+
+    Luồng xử lý:
+    1) Gán biến môi trường `DJANGO_SETTINGS_MODULE` nếu chưa có.
+    2) Import hàm `execute_from_command_line` của Django.
+    3) Đẩy toàn bộ `sys.argv` vào Django để thực thi lệnh
+       (ví dụ: `runserver`, `migrate`, `test`, ...).
+    """
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'banhang.settings')
     try:
         from django.core.management import execute_from_command_line

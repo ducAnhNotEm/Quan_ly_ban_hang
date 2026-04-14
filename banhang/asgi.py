@@ -1,10 +1,8 @@
-"""
-ASGI config for banhang project.
+﻿"""
+Cấu hình ASGI cho dự án `banhang`.
 
-It exposes the ASGI callable as a module-level variable named ``application``.
-
-For more information on this file, see
-https://docs.djangoproject.com/en/6.0/howto/deployment/asgi/
+Biến module-level `application` được máy chủ ASGI sử dụng để phục vụ app.
+Tài liệu: https://docs.djangoproject.com/en/6.0/howto/deployment/asgi/
 """
 
 import os
@@ -14,3 +12,4 @@ from django.core.asgi import get_asgi_application
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'banhang.settings')
 
 application = get_asgi_application()
+

@@ -1,4 +1,11 @@
 ﻿{% load static %}
+{#
+  Template: login.html
+  Mục đích: Trang đăng nhập user.
+  Dữ liệu thường dùng:
+  - messages: thông báo lỗi/thành công từ Django messages framework.
+  - request.POST.username: giữ lại username sau khi submit lỗi.
+#}
 <!doctype html>
 <html lang="vi">
   <head>
@@ -14,6 +21,7 @@
     <div class="page-glow page-glow-left" aria-hidden="true"></div>
     <div class="page-glow page-glow-right" aria-hidden="true"></div>
 
+    {# Header điều hướng nhanh về trang chủ / đăng nhập / đăng ký. #}
     <header class="site-header">
       <div class="container nav-wrap">
         <a href="{% url 'home' %}" class="logo" aria-label="Sales Management Home">
@@ -31,6 +39,7 @@
 
     <main class="auth-shell">
       <div class="container">
+        {# Khối giao diện chính của màn hình đăng nhập. #}
         <section class="page-card auth-card">
           <div class="auth-brand">
             <h1 class="title">Đăng nhập</h1>
@@ -40,6 +49,7 @@
           <form method="post" action="{% url 'login' %}" class="auth-form">
             {% csrf_token %}
 
+            {# Hiển thị toàn bộ thông báo trả về từ luồng xử lý đăng nhập. #}
             {% if messages %}
             <ul class="messages-list">
               {% for message in messages %}
@@ -48,6 +58,7 @@
             </ul>
             {% endif %}
 
+            {# Form gồm 2 trường bắt buộc: tên đăng nhập + mật khẩu. #}
             <div class="form-grid">
               <div class="form-group full-width">
                 <label for="username">Tên đăng nhập</label>
@@ -86,4 +97,7 @@
     </main>
   </body>
 </html>
+
+
+
 

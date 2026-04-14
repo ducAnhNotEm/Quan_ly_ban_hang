@@ -1,4 +1,4 @@
-# Python
+﻿# File Python
 __pycache__/
 *.py[cod]
 *.pyo
@@ -7,34 +7,35 @@ __pycache__/
 *.egg-info/
 .eggs/
 
-# Virtual environments
+# Môi trường ảo
 .venv/
 venv/
 env/
 
-# Django
+# Nhật ký Django
 *.log
 local_settings.py
 media/
 
-# Database
+# Cơ sở dữ liệu
 *.sqlite3
 
-# Environment files
+# File biến môi trường
 .env
 .env.*
 !.env.mysql.example
 
-# IDE / Editor
+# Công cụ soạn thảo / IDE
 .vscode/
 .idea/
 *.swp
 
-# OS
+# Hệ điều hành
 .DS_Store
 Thumbs.db
 
-# Test / coverage
+# Kiểm thử / độ bao phủ
 .pytest_cache/
 .coverage
 htmlcov/
+

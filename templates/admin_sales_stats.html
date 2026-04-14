@@ -1,4 +1,11 @@
-{% load static %}
+﻿{% load static %}
+{#
+  Template: admin_sales_stats.html
+  Mục đích: Trang staff xem thống kê tổng hợp.
+  Dữ liệu từ view `admin_sales_stats`:
+  - registered_customers, sold_orders, total_products
+  - revenue_display, generated_at
+#}
 <!DOCTYPE html>
 <html lang="vi">
   <head>
@@ -29,6 +36,7 @@
     </script>
   </head>
   <body class="bg-slate-50 text-slate-900 font-body antialiased">
+    {# Header điều hướng riêng cho staff/admin. #}
     <header class="fixed top-0 z-50 w-full bg-white/80 shadow-sm glass-nav">
       <div class="mx-auto flex w-full max-w-[1600px] items-center justify-between px-8 py-4">
         <div class="flex items-center gap-8">
@@ -38,6 +46,9 @@
           <nav class="hidden items-center gap-6 md:flex">
             <a class="text-sm text-slate-600 transition-colors hover:text-indigo-600" href="{% url 'home' %}">
               Trang chủ
+            </a>
+            <a class="text-sm text-slate-600 transition-colors hover:text-indigo-600" href="{% url 'topup_admin_review' %}">
+              Duyệt nạp tiền
             </a>
             <a class="text-sm text-slate-600 transition-colors hover:text-indigo-600" href="{% url 'products:admin_product_create' %}">
               Thêm sản phẩm
@@ -68,12 +79,14 @@
     </header>
 
     <main class="mx-auto max-w-[1600px] px-8 pb-20 pt-28">
+      {# Breadcrumb đơn giản để user biết vị trí hiện tại. #}
       <nav class="mb-8 flex items-center gap-2 text-sm text-slate-500">
         <a class="hover:text-indigo-600" href="{% url 'home' %}">Trang chủ</a>
         <span class="material-symbols-outlined text-sm">chevron_right</span>
         <span>Thống kê bán hàng</span>
       </nav>
 
+      {# Banner đầu trang: tóm tắt mục đích thống kê và thời điểm cập nhật. #}
       <section class="mb-8 rounded-2xl bg-gradient-to-r from-indigo-700 to-indigo-500 px-8 py-10 text-white">
         <h1 class="font-headline text-3xl font-extrabold md:text-4xl">Thống kê bán hàng</h1>
         <p class="mt-3 max-w-3xl text-indigo-100">
@@ -84,6 +97,7 @@
         </p>
       </section>
 
+      {# 4 thẻ KPI chính của hệ thống. #}
       <section class="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-4">
         <article class="rounded-xl border border-slate-100 bg-white p-6 shadow-sm">
           <div class="mb-4 flex items-center justify-between">
@@ -122,6 +136,7 @@
         </article>
       </section>
 
+      {# Gợi ý các hướng mở rộng báo cáo trong tương lai. #}
       <section class="mt-8 rounded-xl border border-slate-100 bg-white p-6 shadow-sm">
         <h2 class="font-headline text-xl font-bold text-indigo-900">Gợi ý mở rộng</h2>
         <ul class="mt-4 space-y-2 text-sm text-slate-600">
@@ -132,6 +147,7 @@
       </section>
     </main>
 
+    {# Footer dùng chung cho nhóm trang quản trị hiện tại. #}
     <footer class="border-t border-slate-200 bg-white">
       <div class="mx-auto grid max-w-[1600px] grid-cols-1 gap-8 px-8 py-12 md:grid-cols-4">
         <div>
@@ -142,6 +158,7 @@
           <p class="mb-3 text-sm font-bold text-slate-900">Điều hướng</p>
           <ul class="space-y-2 text-sm text-slate-500">
             <li><a class="hover:text-indigo-600" href="{% url 'home' %}">Trang chủ</a></li>
+            <li><a class="hover:text-indigo-600" href="{% url 'topup_admin_review' %}">Duyệt nạp tiền</a></li>
             <li><a class="hover:text-indigo-600" href="{% url 'products:admin_product_create' %}">Thêm sản phẩm</a></li>
             <li><a class="hover:text-indigo-600" href="{% url 'admin_sales_stats' %}">Thống kê bán hàng</a></li>
           </ul>
@@ -173,3 +190,6 @@
     </footer>
   </body>
 </html>
+
+
+

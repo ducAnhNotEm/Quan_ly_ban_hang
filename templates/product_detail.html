@@ -1,4 +1,11 @@
 ﻿{% load static %}
+{#
+  Template: product_detail.html
+  Mục đích: Trang chi tiết sản phẩm (đang ở trạng thái placeholder/chưa có dữ liệu thật).
+  Ghi chú:
+  - Điều hướng đầu trang thay đổi theo login/staff tương tự trang chủ.
+  - Nội dung hiện chỉ là khung mẫu để chờ gắn dữ liệu sản phẩm thật.
+#}
 <!DOCTYPE html>
 <html lang="vi">
   <head>
@@ -23,13 +30,18 @@
     </script>
   </head>
   <body class="bg-slate-50 text-slate-900 font-body antialiased">
+    {# Header điều hướng chung cho khu vực user. #}
     <header class="fixed top-0 z-50 w-full bg-white/80 shadow-sm glass-nav">
       <div class="mx-auto flex w-full max-w-[1600px] items-center justify-between px-8 py-4">
         <div class="flex items-center gap-8">
           <a class="text-2xl font-headline font-extrabold tracking-tight text-indigo-900" href="{% url 'home' %}">Sales Store</a>
           <nav class="hidden items-center gap-6 md:flex">
             <a class="border-b-2 border-indigo-600 py-1 text-sm font-semibold text-indigo-700" href="{% url 'home' %}">Trang chủ</a>
-            <a class="text-sm text-slate-600 transition-colors hover:text-indigo-600" href="#">Yêu cầu nạp tiền</a>
+            {% if request.user.is_authenticated %}
+            <a class="text-sm text-slate-600 transition-colors hover:text-indigo-600" href="{% if request.user.is_staff %}{% url 'topup_admin_review' %}{% else %}{% url 'topup_request' %}{% endif %}">Yêu cầu nạp tiền</a>
+            {% else %}
+            <a class="text-sm text-slate-600 transition-colors hover:text-indigo-600" href="{% url 'login' %}">Yêu cầu nạp tiền</a>
+            {% endif %}
             {% if request.user.is_authenticated and not request.user.is_staff %}
             <a class="text-sm text-slate-600 transition-colors hover:text-indigo-600" href="#">Ví tiền</a>
             <a class="text-sm text-slate-600 transition-colors hover:text-indigo-600" href="#">Giỏ hàng</a>
@@ -52,12 +64,14 @@
     </header>
 
     <main class="mx-auto max-w-[1600px] px-8 pb-20 pt-28">
+      {# Breadcrumb: Trang chủ > Chi tiết sản phẩm. #}
       <nav class="mb-8 flex items-center gap-2 text-sm text-slate-500">
         <a class="hover:text-indigo-600" href="{% url 'home' %}">Trang chủ</a>
         <span class="material-symbols-outlined text-sm">chevron_right</span>
         <span>Chi tiết sản phẩm</span>
       </nav>
 
+      {# Khối thông báo trạng thái: trang đang chờ dữ liệu sản phẩm thật. #}
       <section class="mb-10 rounded-2xl border border-slate-200 bg-white p-10 text-center shadow-sm">
         <div class="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-indigo-50 text-indigo-600">
           <span class="material-symbols-outlined text-3xl">inventory_2</span>
@@ -67,6 +81,7 @@
         <a class="mt-6 inline-flex rounded-full bg-indigo-600 px-6 py-3 text-sm font-bold text-white transition-colors hover:bg-indigo-700" href="{% url 'home' %}">Quay về trang chủ</a>
       </section>
 
+      {# Ba placeholder mô phỏng bố cục chi tiết sản phẩm. #}
       <section class="grid grid-cols-1 gap-6 md:grid-cols-3">
         <div class="rounded-xl border-2 border-dashed border-slate-200 bg-white p-6 text-center text-slate-400">
           <span class="material-symbols-outlined mb-2 block text-3xl">image</span>
@@ -83,6 +98,7 @@
       </section>
     </main>
 
+    {# Footer dùng chung. #}
     <footer class="border-t border-slate-200 bg-white">
       <div class="mx-auto grid max-w-[1600px] grid-cols-1 gap-8 px-8 py-12 md:grid-cols-4">
         <div>
@@ -120,3 +136,6 @@
     </footer>
   </body>
 </html>
+
+
+

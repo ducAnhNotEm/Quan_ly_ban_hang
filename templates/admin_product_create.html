@@ -1,4 +1,13 @@
-{% load static %}
+﻿{% load static %}
+{#
+  Template: admin_product_create.html
+  Mục đích: Form cho staff/admin tạo sản phẩm mới.
+  Dữ liệu từ view:
+  - category_options: danh sách thể loại có sẵn để gợi ý qua datalist.
+  Ghi chú:
+  - Form hỗ trợ ảnh chính + nhiều ảnh phụ.
+  - JS cuối file chỉ xử lý preview phía client, không thay thế validate ở server.
+#}
 <!DOCTYPE html>
 <html lang="vi">
   <head>
@@ -29,6 +38,7 @@
     </script>
   </head>
   <body class="bg-slate-50 text-slate-900 font-body antialiased">
+    {# Header điều hướng chính cho khu vực quản trị. #}
     <header class="fixed top-0 z-50 w-full bg-white/80 shadow-sm glass-nav">
       <div class="mx-auto flex w-full max-w-[1600px] items-center justify-between px-8 py-4">
         <div class="flex items-center gap-8">
@@ -42,6 +52,11 @@
             <a class="border-b-2 border-indigo-600 py-1 text-sm font-semibold text-indigo-700" href="{% url 'products:admin_product_create' %}">
               Admin thêm sản phẩm
             </a>
+            {% if request.user.is_authenticated and request.user.is_staff %}
+            <a class="text-sm text-slate-600 transition-colors hover:text-indigo-600" href="{% url 'topup_admin_review' %}">
+              Duyệt nạp tiền
+            </a>
+            {% endif %}
             {% if request.user.is_authenticated and not request.user.is_staff %}
             <a class="text-sm text-slate-600 transition-colors hover:text-indigo-600" href="#">
               Giỏ hàng
@@ -75,12 +90,14 @@
     </header>
 
     <main class="mx-auto max-w-[1600px] px-8 pb-20 pt-28">
+      {# Breadcrumb: giúp xác định vị trí tại trang tạo sản phẩm. #}
       <nav class="mb-8 flex items-center gap-2 text-sm text-slate-500">
         <a class="hover:text-indigo-600" href="{% url 'home' %}">Trang chủ</a>
         <span class="material-symbols-outlined text-sm">chevron_right</span>
         <span>Admin thêm sản phẩm</span>
       </nav>
 
+      {# Dải giới thiệu mô tả nhanh mục tiêu của form. #}
       <section class="mb-8 rounded-2xl bg-gradient-to-r from-indigo-700 to-indigo-500 px-8 py-10 text-white">
         <h1 class="font-headline text-3xl font-extrabold md:text-4xl">Tạo sản phẩm mới</h1>
         <p class="mt-3 max-w-3xl text-indigo-100">
@@ -88,10 +105,12 @@
         </p>
       </section>
 
+      {# Form tạo sản phẩm: POST multipart để gửi cả nội dung chữ và file ảnh. #}
       <section class="rounded-2xl bg-white p-8 shadow-sm">
         <form class="space-y-8" method="post" enctype="multipart/form-data">
           {% csrf_token %}
 
+          {# Nhóm trường thông tin sản phẩm cơ bản. #}
           <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
             <div class="md:col-span-2">
               <label class="mb-2 block text-sm font-bold text-slate-700" for="product_name">Tên sản phẩm</label>
@@ -117,6 +136,7 @@
                 placeholder="Chọn hoặc nhập thể loại mới"
                 required
               />
+              {# Gợi ý thể loại đã có từ DB để nhập nhanh hơn. #}
               <datalist id="category-list">
                 {% for category in category_options %}
                 <option value="{{ category }}"></option>
@@ -191,6 +211,7 @@
             </div>
           </div>
 
+          {# Khung xem trước ảnh chính/ảnh phụ ngay trên trình duyệt trước khi gửi. #}
           <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
             <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
               <p class="mb-3 text-sm font-bold text-slate-700">Xem trước ảnh chính</p>
@@ -210,6 +231,7 @@
             </div>
           </div>
 
+          {# Nút gửi và làm mới form. #}
           <div class="flex flex-wrap gap-3">
             <button
               class="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-6 py-3 text-sm font-bold text-white transition-colors hover:bg-indigo-700"
@@ -228,6 +250,7 @@
       </section>
     </main>
 
+    {# Footer điều hướng phụ. #}
     <footer class="border-t border-slate-200 bg-white">
       <div class="mx-auto grid max-w-[1600px] grid-cols-1 gap-8 px-8 py-12 md:grid-cols-4">
         <div>
@@ -239,6 +262,9 @@
           <ul class="space-y-2 text-sm text-slate-500">
             <li><a class="hover:text-indigo-600" href="{% url 'home' %}">Trang chủ</a></li>
             <li><a class="hover:text-indigo-600" href="{% url 'products:admin_product_create' %}">Thêm sản phẩm</a></li>
+            {% if request.user.is_authenticated and request.user.is_staff %}
+            <li><a class="hover:text-indigo-600" href="{% url 'topup_admin_review' %}">Duyệt nạp tiền</a></li>
+            {% endif %}
             <li><a class="hover:text-indigo-600" href="{% url 'products:detail_preview' %}">Xem preview</a></li>
           </ul>
         </div>
@@ -269,6 +295,7 @@
     </footer>
 
     <script>
+      // Lấy các phần tử cần dùng cho chức năng xem trước ảnh.
       const mainInput = document.getElementById("main_image");
       const galleryInput = document.getElementById("gallery_images");
       const mainPreview = document.getElementById("main-preview");
@@ -276,6 +303,7 @@
       const galleryPreview = document.getElementById("gallery-preview");
       const galleryError = document.getElementById("gallery-error");
 
+      // Khi chọn ảnh chính: hiển thị xem trước, hoặc làm mới nếu bỏ chọn file.
       mainInput.addEventListener("change", () => {
         const file = mainInput.files && mainInput.files[0];
         if (!file) {
@@ -289,6 +317,7 @@
         mainPlaceholder.classList.add("hidden");
       });
 
+      // Khi chọn ảnh phụ: giới hạn tối đa 6 ảnh, và hiển thị xem trước dạng lưới.
       galleryInput.addEventListener("change", () => {
         const files = Array.from(galleryInput.files || []);
         galleryPreview.innerHTML = "";
@@ -325,3 +354,6 @@
     </script>
   </body>
 </html>
+
+
+

@@ -1,4 +1,12 @@
 ﻿{% load static %}
+{#
+  Template: register.html
+  Mục đích: Trang đăng ký tài khoản mới.
+  Dữ liệu thường dùng:
+  - messages: thông báo chung từ view register_view.
+  - form.errors: lỗi chi tiết từng field từ RegisterForm.
+  - request.POST: giữ lại dữ liệu đã nhập khi submit lỗi.
+#}
 <!doctype html>
 <html lang="vi">
   <head>
@@ -14,6 +22,7 @@
     <div class="page-glow page-glow-left" aria-hidden="true"></div>
     <div class="page-glow page-glow-right" aria-hidden="true"></div>
 
+    {# Header điều hướng tối giản cho trang đăng ký. #}
     <header class="site-header">
       <div class="container nav-wrap">
         <a href="{% url 'home' %}" class="logo" aria-label="Sales Management Home">
@@ -30,6 +39,7 @@
 
     <main class="auth-shell">
       <div class="container">
+        {# Khối chính chứa form đăng ký tài khoản. #}
         <section class="page-card auth-card">
           <div class="auth-brand">
             <h1 class="title">Đăng ký tài khoản</h1>
@@ -39,6 +49,7 @@
           <form method="post" action="{% url 'register' %}" class="auth-form">
             {% csrf_token %}
 
+            {# Thông báo tổng quát từ hệ thống (thành công/lỗi/thông tin). #}
             {% if messages %}
             <ul class="messages-list">
               {% for message in messages %}
@@ -47,6 +58,7 @@
             </ul>
             {% endif %}
 
+            {# Hiển thị lỗi chi tiết theo từng trường và lỗi toàn cục của form. #}
             {% if form and form.errors %}
             <ul class="messages-list">
               {% for field in form %}
@@ -60,8 +72,10 @@
             </ul>
             {% endif %}
 
+            {# Mặc định chọn giới tính Nam nếu user chưa chọn gì. #}
             {% with selected_gender=request.POST.gender|default:'Nam' %}
             <div class="form-grid">
+              {# Nhóm thông tin tài khoản + hồ sơ khách hàng. #}
               <div class="form-group">
                 <label for="username">Tên đăng nhập *</label>
                 <input
@@ -183,5 +197,8 @@
     </main>
   </body>
 </html>
+
+
+
 
 

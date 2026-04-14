@@ -1,4 +1,4 @@
-from decimal import Decimal
+﻿from decimal import Decimal
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
@@ -7,9 +7,21 @@ from accounts.models import Customer
 from orders.models import Order, OrderDetail
 from products.models import Product
 
+"""
+Test suite cho app `orders`.
+
+Mục tiêu:
+- Xác nhận giá trị mặc định của đơn hàng.
+- Xác nhận quan hệ FK và logic tính tiền tự động.
+- Bảo vệ rule tổng tiền không âm và cascade delete.
+"""
+
 
 class OrdersModelTests(TestCase):
+    """Kiểm thử mô hình dữ liệu (model) `Order` và `OrderDetail`."""
+
     def setUp(self):
+        """Tạo tài khoản/khách hàng/sản phẩm mẫu để dùng lại cho tất cả bài kiểm thử."""
         self.user = get_user_model().objects.create_user(
             username="charlie",
             email="charlie@example.com",
@@ -36,6 +48,7 @@ class OrdersModelTests(TestCase):
         )
 
     def test_order_defaults(self):
+        """Đơn hàng mới tạo phải có trạng thái/tiền mặc định đúng theo mô hình dữ liệu (model)."""
         order = Order.objects.create(customer=self.customer)
 
         self.assertEqual(order.status, Order.Status.PAID)
@@ -45,6 +58,7 @@ class OrdersModelTests(TestCase):
         self.assertEqual(order.total_amount, Decimal("0"))
 
     def test_order_detail_relations(self):
+        """OrderDetail phải nối đúng với Order và Product qua reverse relation."""
         order = Order.objects.create(
             customer=self.customer,
             sub_total_amount=Decimal("60000.00"),
@@ -66,6 +80,7 @@ class OrdersModelTests(TestCase):
         self.assertEqual(detail.quantity, 2)
 
     def test_order_detail_auto_calculates_amounts(self):
+        """`save()` của OrderDetail phải tự động tính discount_amount/sub_total."""
         order = Order.objects.create(customer=self.customer)
 
         detail = OrderDetail.objects.create(
@@ -80,6 +95,7 @@ class OrdersModelTests(TestCase):
         self.assertEqual(detail.sub_total, Decimal("54000.00"))
 
     def test_recalculate_order_totals_from_details(self):
+        """`recalculate_totals()` phải tổng hợp đúng gross/discount/coupon => total."""
         order = Order.objects.create(
             customer=self.customer,
             coupon_code="SALE5K",
@@ -109,6 +125,7 @@ class OrdersModelTests(TestCase):
         self.assertEqual(order.total_amount, Decimal("99000.00"))
 
     def test_recalculate_order_total_not_negative(self):
+        """Tổng tiền sau coupon không được âm, phải bị chặn về 0."""
         order = Order.objects.create(
             customer=self.customer,
             coupon_code="SALE200K",
@@ -131,6 +148,7 @@ class OrdersModelTests(TestCase):
         self.assertEqual(order.total_amount, Decimal("0.00"))
 
     def test_delete_order_cascades_order_details(self):
+        """Xóa Order phải xóa toàn bộ OrderDetail liên quan."""
         order = Order.objects.create(customer=self.customer)
         OrderDetail.objects.create(
             order=order,
@@ -145,6 +163,7 @@ class OrdersModelTests(TestCase):
         self.assertEqual(OrderDetail.objects.count(), 0)
 
     def test_delete_product_cascades_order_details(self):
+        """Xóa Product phải xóa OrderDetail đang FK tới Product đó."""
         order = Order.objects.create(customer=self.customer)
         OrderDetail.objects.create(
             order=order,
@@ -157,3 +176,5 @@ class OrdersModelTests(TestCase):
         self.product.delete()
 
         self.assertEqual(OrderDetail.objects.count(), 0)
+
+

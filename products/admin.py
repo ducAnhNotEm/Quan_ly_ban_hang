@@ -1,3 +1,4 @@
-from django.contrib import admin
+﻿from django.contrib import admin
 
-# Register your models here.
+# Đăng ký mô hình dữ liệu (model) tại đây nếu cần hiển thị trong trang quản trị.
+

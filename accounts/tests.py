@@ -7,9 +7,21 @@ from django.urls import reverse
 
 from accounts.models import Customer, TopUpRequest, Wallet
 
+"""
+Test suite cho app `accounts` và các luồng auth/topup liên quan.
+
+Ý nghĩa:
+- Bảo vệ rule dữ liệu của model `Customer`, `Wallet`, `TopUpRequest`.
+- Bảo vệ luồng login/register/logout.
+- Bảo vệ cách trang home hiển thị dữ liệu topup theo vai trò user/staff.
+"""
+
 
 class AccountsModelTests(TestCase):
+    """Kiểm thử các ràng buộc mô hình dữ liệu (model) cơ bản của app accounts."""
+
     def setUp(self):
+        """Tạo tài khoản nền dùng chung cho các bài kiểm thử mô hình dữ liệu (model)."""
         self.user = get_user_model().objects.create_user(
             username="alice",
             email="alice@example.com",
@@ -17,6 +29,7 @@ class AccountsModelTests(TestCase):
         )
 
     def test_create_customer_with_default_gender(self):
+        """Không truyền gender thì Customer phải mặc định là `Khac`."""
         customer = Customer.objects.create(
             user=self.user,
             full_name="Alice Nguyen",
@@ -27,6 +40,7 @@ class AccountsModelTests(TestCase):
         self.assertEqual(self.user.customer_profile, customer)
 
     def test_wallet_defaults_and_reverse_relation(self):
+        """Wallet mới tạo có số dư 0 và liên kết ngược với Customer đúng."""
         customer = Customer.objects.create(
             user=self.user,
             full_name="Alice Nguyen",
@@ -39,6 +53,7 @@ class AccountsModelTests(TestCase):
         self.assertEqual(customer.wallet, wallet)
 
     def test_topup_request_defaults_to_pending(self):
+        """TopUpRequest mới tạo phải có trạng thái mặc định là PENDING."""
         customer = Customer.objects.create(
             user=self.user,
             full_name="Alice Nguyen",
@@ -57,6 +72,7 @@ class AccountsModelTests(TestCase):
         self.assertEqual(customer.topup_requests.count(), 1)
 
     def test_customer_requires_unique_user(self):
+        """Mỗi tài khoản chỉ được gắn tối đa 1 hồ sơ Customer (OneToOne)."""
         Customer.objects.create(
             user=self.user,
             full_name="Alice Nguyen",
@@ -71,6 +87,7 @@ class AccountsModelTests(TestCase):
             )
 
     def test_deleting_customer_cascades_wallet_and_topups(self):
+        """Xóa Customer phải xóa theo Wallet và TopUpRequest liên quan."""
         customer = Customer.objects.create(
             user=self.user,
             full_name="Alice Nguyen",
@@ -86,7 +103,10 @@ class AccountsModelTests(TestCase):
 
 
 class LoginViewTests(TestCase):
+    """Kiểm thử luồng đăng nhập và các route xác thực liên quan."""
+
     def test_staff_login_redirects_home(self):
+        """Staff đăng nhập thành công phải được tạo phiên và chuyển về trang chủ."""
         staff_user = get_user_model().objects.create_user(
             username="admin01",
             email="admin@example.com",
@@ -104,6 +124,7 @@ class LoginViewTests(TestCase):
         self.assertEqual(int(self.client.session["_auth_user_id"]), staff_user.id)
 
     def test_admin_and_dashboard_routes_return_404(self):
+        """Các route cũ `/admin/` và `/admin-dashboard/` hiện chưa ánh xạ view."""
         response_admin = self.client.get("/admin/")
         response_dashboard = self.client.get("/admin-dashboard/")
 
@@ -112,7 +133,10 @@ class LoginViewTests(TestCase):
 
 
 class RegisterViewTests(TestCase):
+    """Kiểm thử luồng đăng ký user account."""
+
     def test_register_missing_required_fields_shows_errors(self):
+        """Gửi form rỗng phải hiển thị đầy đủ thông báo lỗi bắt buộc."""
         response = self.client.post(reverse("register"), data={})
 
         self.assertEqual(response.status_code, 200)
@@ -122,6 +146,7 @@ class RegisterViewTests(TestCase):
         self.assertContains(response, "Vui long nhap so dien thoai.")
 
     def test_register_password_mismatch_shows_error(self):
+        """Mật khẩu xác nhận không trùng phải báo lỗi tại form."""
         response = self.client.post(
             reverse("register"),
             data={
@@ -139,6 +164,7 @@ class RegisterViewTests(TestCase):
         self.assertContains(response, "Mat khau xac nhan khong khop.")
 
     def test_register_success_creates_user_customer_wallet_and_redirects(self):
+        """Đăng ký hợp lệ phải tạo đồng bộ tài khoản, hồ sơ khách hàng và ví."""
         response = self.client.post(
             reverse("register"),
             data={
@@ -164,8 +190,12 @@ class RegisterViewTests(TestCase):
         self.assertEqual(customer.gender, Customer.Gender.FEMALE)
         self.assertTrue(Wallet.objects.filter(customer=customer).exists())
 
+
 class LogoutViewTests(TestCase):
+    """Kiểm thử luồng đăng xuất."""
+
     def test_logout_clears_session_and_redirects_home(self):
+        """Đăng xuất phải xóa session auth và redirect về home."""
         user = get_user_model().objects.create_user(
             username="logout_user",
             email="logout@example.com",
@@ -180,7 +210,10 @@ class LogoutViewTests(TestCase):
 
 
 class HomeTopupSectionTests(TestCase):
+    """Kiểm thử phần topup trên home theo từng vai trò đăng nhập."""
+
     def setUp(self):
+        """Tạo dữ liệu staff, khách hàng và topup request mẫu."""
         user_model = get_user_model()
 
         self.staff_user = user_model.objects.create_user(
@@ -232,6 +265,7 @@ class HomeTopupSectionTests(TestCase):
         )
 
     def test_admin_sees_topup_requests_only(self):
+        """Staff phải thấy danh sách yêu cầu đang chờ xử lý trên trang chủ."""
         self.client.force_login(self.staff_user)
 
         response = self.client.get(reverse("home"))
@@ -242,6 +276,7 @@ class HomeTopupSectionTests(TestCase):
         self.assertNotContains(response, "APPROVED_NOTE")
 
     def test_customer_sees_own_topup_history(self):
+        """Customer thường chỉ thấy lịch sử topup của chính mình."""
         self.client.force_login(self.customer_user)
 
         response = self.client.get(reverse("home"))
@@ -250,3 +285,6 @@ class HomeTopupSectionTests(TestCase):
         self.assertContains(response, "PENDING_NOTE")
         self.assertContains(response, "APPROVED_NOTE")
         self.assertNotContains(response, "OTHER_USER_NOTE")
+
+
+
