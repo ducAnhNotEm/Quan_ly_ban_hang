@@ -91,9 +91,8 @@ TEMPLATES = [
 WSGI_APPLICATION = 'banhang.wsgi.application'
 
 
-# Cấu hình cơ sở dữ liệu.
+# Cấu hình cơ sở dữ liệu (MySQL local).
 # Xem thêm: https://docs.djangoproject.com/en/6.0/ref/settings/#databases
-
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',

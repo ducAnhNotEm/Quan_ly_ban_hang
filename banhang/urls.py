@@ -543,6 +543,8 @@ urlpatterns = [
     # Danh sách route chính của app.
     # Route sản phẩm được tách sang file URLs riêng của app `products`.
     path("san-pham/", include("products.urls")),
+    # Route gio hang va mua ngay tách riêng trong app `orders`.
+    path("", include("orders.urls")),
     # Trang thống kê bán hàng cho quản trị/staff.
     path("admin/thong-ke-ban-hang/", admin_sales_stats, name="admin_sales_stats"),
     # Trang khách hàng gửi yêu cầu nạp tiền.
