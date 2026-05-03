@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ví tiền</title>
+  </head>
+  <body>
+    <main>
+      <h1>Ví tiền</h1>
+      {% include "partials/user_quick_menu.html" %}
+
+      <p><strong>Số dư hiện tại:</strong> {{ balance_display }}</p>
+
+      <h2>Lịch sử yêu cầu nạp tiền gần đây</h2>
+      {% if has_topups %}
+      <table border="1" cellpadding="8" cellspacing="0">
+        <thead>
+          <tr>
+            <th>Mã yêu cầu</th>
+            <th>Số tiền</th>
+            <th>Trạng thái</th>
+            <th>Ghi chú</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in topup_rows %}
+          <tr>
+            <td>#{{ row.id }}</td>
+            <td>{{ row.amount_display }}</td>
+            <td>{{ row.status }}</td>
+            <td>{{ row.note }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p>Chưa có yêu cầu nạp tiền nào.</p>
+      {% endif %}
+    </main>
+  </body>
+</html>

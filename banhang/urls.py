@@ -214,6 +214,48 @@ def home(request):
         },
     ]
 
+    topup_section_title = ""
+    topup_rows = []
+
+    if request.user.is_authenticated:
+        if request.user.is_staff:
+            topup_section_title = "Yêu cầu nạp tiền"
+            pending_rows = (
+                TopUpRequest.objects.filter(status=TopUpRequest.Status.PENDING)
+                .select_related("customer__user")
+                .order_by("-id")
+                .values("id", "amount", "note", "status", "customer__user__username")
+            )
+            topup_rows = [
+                {
+                    "id": row["id"],
+                    "amount_display": _format_currency_vnd(row["amount"]),
+                    "note": row["note"] or "",
+                    "status": row["status"],
+                    "username": row["customer__user__username"],
+                }
+                for row in pending_rows
+            ]
+        else:
+            customer = Customer.objects.filter(user=request.user).first()
+            if customer is not None:
+                topup_section_title = "Lịch sử yêu cầu nạp tiền"
+                history_rows = (
+                    TopUpRequest.objects.filter(customer=customer)
+                    .order_by("-id")
+                    .values("id", "amount", "note", "status")[:30]
+                )
+                topup_rows = [
+                    {
+                        "id": row["id"],
+                        "amount_display": _format_currency_vnd(row["amount"]),
+                        "note": row["note"] or "",
+                        "status": row["status"],
+                        "username": request.user.username,
+                    }
+                    for row in history_rows
+                ]
+
     # Dữ liệu tổng cho template.
     context = {
         "category_filters": category_filters,
@@ -222,6 +264,9 @@ def home(request):
         "has_active_filters": bool(selected_category or selected_price or selected_stock),
         # Khung trống 12 ô sản phẩm cho giao diện.
         "product_slots": list(range(12)),
+        "topup_section_title": topup_section_title,
+        "topup_rows": topup_rows,
+        "has_topup_rows": bool(topup_rows),
     }
     return render(request, "home.html", context)
 

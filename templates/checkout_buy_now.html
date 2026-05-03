@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Checkout mua ngay</title>
+  </head>
+  <body>
+    <main>
+      <h1>Checkout - {{ checkout_source }}</h1>
+      {% include "partials/user_quick_menu.html" %}
+
+      <form action="{% url 'buy_now_checkout' %}" method="get">
+        <p>Truy cập theo dạng query: <code>?product_id=&lt;id&gt;&amp;quantity=&lt;so_luong&gt;</code>.</p>
+        <p>
+          <label for="product_id"><strong>Product ID:</strong></label>
+          <input id="product_id" name="product_id" type="number" min="1" value="{{ product_id_input|default:'' }}" />
+        </p>
+        <p>
+          <label for="quantity"><strong>Số lượng:</strong></label>
+          <input id="quantity" name="quantity" type="number" min="1" value="{{ quantity_input|default:'' }}" />
+        </p>
+        <p>
+          <label for="discount_code"><strong>Mã giảm giá:</strong></label>
+          <input
+            id="discount_code"
+            name="discount_code"
+            type="text"
+            value="{{ discount_code_input }}"
+            placeholder="Nhập mã giảm giá"
+          />
+        </p>
+        <button type="submit">Cập nhật checkout</button>
+      </form>
+
+      {% if error_message %}
+      <p><strong>Lỗi:</strong> {{ error_message }}</p>
+      {% endif %}
+
+      {% if preview_row %}
+      <table border="1" cellpadding="8" cellspacing="0">
+        <thead>
+          <tr>
+            <th>Sản phẩm</th>
+            <th>Số lượng</th>
+            <th>Đơn giá</th>
+            <th>Thành tiền</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>{{ preview_row.product_name }} (#{{ preview_row.product_id }})</td>
+            <td>{{ preview_row.quantity }}</td>
+            <td>{{ preview_row.unit_price_display }}</td>
+            <td>{{ preview_row.line_subtotal_display }}</td>
+          </tr>
+        </tbody>
+      </table>
+      {% else %}
+      <p>Chưa có dữ liệu mua ngay để hiển thị.</p>
+      {% endif %}
+    </main>
+  </body>
+</html>

@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Checkout giỏ hàng</title>
+  </head>
+  <body>
+    <main>
+      <h1>Checkout - {{ checkout_source }}</h1>
+      {% include "partials/user_quick_menu.html" %}
+
+      {% if has_items %}
+      <table border="1" cellpadding="8" cellspacing="0">
+        <thead>
+          <tr>
+            <th>Sản phẩm</th>
+            <th>Số lượng</th>
+            <th>Đơn giá</th>
+            <th>Thành tiền</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in item_rows %}
+          <tr>
+            <td>{{ row.product_name }} (#{{ row.product_id }})</td>
+            <td>{{ row.quantity }}</td>
+            <td>{{ row.unit_price_display }}</td>
+            <td>{{ row.line_subtotal_display }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <p><strong>Tạm tính:</strong> {{ subtotal_display }}</p>
+      <form action="{% url 'cart_checkout' %}" method="get">
+        <label for="discount_code"><strong>Mã giảm giá:</strong></label>
+        <input
+          id="discount_code"
+          name="discount_code"
+          type="text"
+          value="{{ discount_code_input }}"
+          placeholder="Nhập mã giảm giá"
+        />
+        <button type="submit">Áp dụng</button>
+      </form>
+      {% else %}
+      <p>Chưa có sản phẩm nào được chọn trong giỏ hàng.</p>
+      {% endif %}
+    </main>
+  </body>
+</html>

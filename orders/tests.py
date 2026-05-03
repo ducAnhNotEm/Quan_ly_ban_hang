@@ -279,3 +279,92 @@ class CheckoutRoutePermissionSmokeTests(TestCase):
             data={"product_id": self.product_2.id, "quantity": 1},
         ).json()
         self.assertEqual(buy_now_payload["data"]["checkout"]["source"], "BUY_NOW")
+
+
+class CheckoutPageRenderLoginRequiredSmokeTests(TestCase):
+    """Smoke test cho trang render checkout/wallet/orders và guard login."""
+
+    def setUp(self):
+        user_model = get_user_model()
+        self.customer_user = user_model.objects.create_user(
+            username="page_customer",
+            email="page_customer@example.com",
+            password="testpass123",
+        )
+        self.customer = Customer.objects.create(
+            user=self.customer_user,
+            full_name="Page Customer",
+            phone_number="0911222333",
+        )
+
+        self.product = Product.objects.create(
+            product_name="Sua tuoi",
+            category="Do uong",
+            slug="sua-tuoi",
+            price=Decimal("35000.00"),
+            stock_quantity=30,
+        )
+
+        cart = Cart.objects.create(customer=self.customer)
+        CartItem.objects.create(cart=cart, product=self.product, quantity=2, is_selected=True)
+
+        self.order = Order.objects.create(
+            customer=self.customer,
+            sub_total_amount=Decimal("70000.00"),
+            total_amount=Decimal("70000.00"),
+        )
+        OrderDetail.objects.create(
+            order=self.order,
+            product=self.product,
+            quantity=2,
+            unit_price=Decimal("35000.00"),
+            discount_percent=Decimal("0.00"),
+        )
+
+        self.page_cases = [
+            ("cart_checkout", {}, {"discount_code": "SALE10"}, "checkout_cart.html", "Checkout - CART"),
+            (
+                "buy_now_checkout",
+                {},
+                {"product_id": self.product.id, "quantity": 1, "discount_code": "SAVE5"},
+                "checkout_buy_now.html",
+                "Checkout - BUY_NOW",
+            ),
+            ("orders_list", {}, {}, "orders_list.html", "Đơn hàng của tôi"),
+            ("wallet_view", {}, {}, "wallet_view.html", "Ví tiền"),
+            ("order_detail", {"order_id": self.order.id}, {}, "order_detail.html", f"Chi tiết đơn hàng #{self.order.id}"),
+        ]
+
+    def _get_page_response(self, route_name: str, kwargs: dict, params: dict):
+        return self.client.get(reverse(route_name, kwargs=kwargs), data=params)
+
+    def test_pages_require_login(self):
+        """User chưa đăng nhập bị redirect về login cho toàn bộ trang mới."""
+        login_url = reverse("login")
+
+        for route_name, kwargs, params, _, _ in self.page_cases:
+            response = self._get_page_response(route_name, kwargs, params)
+            self.assertEqual(response.status_code, 302)
+            self.assertIn(login_url, response.url)
+
+    def test_customer_can_render_pages(self):
+        """Customer đăng nhập render được trang mới và đúng template cơ bản."""
+        self.client.force_login(self.customer_user)
+
+        for route_name, kwargs, params, template_name, heading_text in self.page_cases:
+            response = self._get_page_response(route_name, kwargs, params)
+            self.assertEqual(response.status_code, 200)
+            self.assertTemplateUsed(response, template_name)
+            self.assertContains(response, heading_text)
+
+        cart_page = self._get_page_response("cart_checkout", {}, {"discount_code": "VIP50"})
+        self.assertContains(cart_page, 'name="discount_code"')
+        self.assertContains(cart_page, f'action="{reverse("cart_checkout")}"')
+
+        buy_now_page = self._get_page_response(
+            "buy_now_checkout",
+            {},
+            {"product_id": self.product.id, "quantity": 2, "discount_code": "VIP50"},
+        )
+        self.assertContains(buy_now_page, 'name="discount_code"')
+        self.assertContains(buy_now_page, f'action="{reverse("buy_now_checkout")}"')

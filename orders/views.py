@@ -4,8 +4,10 @@ from functools import wraps
 
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
+from django.shortcuts import get_object_or_404, render
 
-from accounts.models import Customer
+from accounts.models import Customer, TopUpRequest
+from orders.models import Order
 from products.models import Cart, CartItem, Product
 
 """
@@ -18,6 +20,16 @@ Muc tieu:
 """
 
 MONEY_QUANTIZE = Decimal("0.01")
+
+
+def _format_currency_vnd(value) -> str:
+    try:
+        amount = Decimal(value or 0)
+    except Exception:  # pragma: no cover - fallback du phong cho du lieu xau.
+        amount = Decimal("0")
+
+    rounded = int(amount.quantize(Decimal("1"), rounding=ROUND_HALF_UP))
+    return f"{rounded:,}".replace(",", ".") + " đ"
 
 
 def _json_error(message: str, *, status: int = 400, code: str | None = None) -> JsonResponse:
@@ -149,6 +161,211 @@ def purchase_flow_guard(view_func):
         return view_func(request, *args, **kwargs)
 
     return _wrapped
+
+
+@purchase_flow_guard
+def cart_checkout(request):
+    if request.method != "GET":
+        return _json_error(
+            "Method khong duoc ho tro cho endpoint nay.",
+            status=405,
+            code="method_not_allowed",
+        )
+
+    customer, error_response = _get_customer_or_error(request)
+    if error_response:
+        return error_response
+
+    cart, _ = Cart.objects.get_or_create(customer=customer)
+    selected_items = cart.items.select_related("product").filter(is_selected=True).order_by("id")
+
+    item_rows = []
+    subtotal = Decimal("0")
+    for item in selected_items:
+        line_subtotal = item.sub_total or Decimal("0")
+        subtotal += line_subtotal
+        item_rows.append(
+            {
+                "product_id": item.product_id,
+                "product_name": item.product.product_name,
+                "quantity": item.quantity,
+                "unit_price_display": _format_currency_vnd(item.product.discounted_price),
+                "line_subtotal_display": _format_currency_vnd(line_subtotal),
+            }
+        )
+
+    context = {
+        "checkout_source": "CART",
+        "item_rows": item_rows,
+        "has_items": bool(item_rows),
+        "subtotal_display": _format_currency_vnd(subtotal),
+        "discount_code_input": (request.GET.get("discount_code") or "").strip(),
+    }
+    return render(request, "checkout_cart.html", context)
+
+
+@purchase_flow_guard
+def buy_now_checkout(request):
+    if request.method != "GET":
+        return _json_error(
+            "Method khong duoc ho tro cho endpoint nay.",
+            status=405,
+            code="method_not_allowed",
+        )
+
+    customer, error_response = _get_customer_or_error(request)
+    if error_response:
+        return error_response
+
+    product_id_raw = (request.GET.get("product_id") or "").strip()
+    quantity_raw = (request.GET.get("quantity") or "").strip()
+
+    preview_row = None
+    error_message = ""
+
+    if product_id_raw or quantity_raw:
+        try:
+            product_id = int(product_id_raw)
+            quantity = int(quantity_raw)
+            if product_id <= 0 or quantity <= 0:
+                raise ValueError
+        except ValueError:
+            error_message = "product_id va quantity phai la so nguyen duong."
+        else:
+            product = Product.objects.filter(pk=product_id).first()
+            if product is None:
+                error_message = "Khong tim thay san pham."
+            elif quantity > product.stock_quantity:
+                error_message = "So luong vuot qua ton kho hien tai."
+            else:
+                line_subtotal = (product.discounted_price * Decimal(quantity)).quantize(
+                    MONEY_QUANTIZE,
+                    rounding=ROUND_HALF_UP,
+                )
+                preview_row = {
+                    "product_id": product.id,
+                    "product_name": product.product_name,
+                    "quantity": quantity,
+                    "unit_price_display": _format_currency_vnd(product.discounted_price),
+                    "line_subtotal_display": _format_currency_vnd(line_subtotal),
+                }
+
+    context = {
+        "checkout_source": "BUY_NOW",
+        "preview_row": preview_row,
+        "error_message": error_message,
+        "product_id_input": product_id_raw,
+        "quantity_input": quantity_raw,
+        "discount_code_input": (request.GET.get("discount_code") or "").strip(),
+    }
+    return render(request, "checkout_buy_now.html", context)
+
+
+@purchase_flow_guard
+def orders_list(request):
+    if request.method != "GET":
+        return _json_error(
+            "Method khong duoc ho tro cho endpoint nay.",
+            status=405,
+            code="method_not_allowed",
+        )
+
+    customer, error_response = _get_customer_or_error(request)
+    if error_response:
+        return error_response
+
+    orders = Order.objects.filter(customer=customer).order_by("-created_at", "-id")
+    order_rows = [
+        {
+            "id": order.id,
+            "status": order.status,
+            "total_amount_display": _format_currency_vnd(order.total_amount),
+            "created_at": order.created_at,
+        }
+        for order in orders
+    ]
+
+    context = {
+        "order_rows": order_rows,
+        "has_orders": bool(order_rows),
+    }
+    return render(request, "orders_list.html", context)
+
+
+@purchase_flow_guard
+def order_detail(request, order_id: int):
+    if request.method != "GET":
+        return _json_error(
+            "Method khong duoc ho tro cho endpoint nay.",
+            status=405,
+            code="method_not_allowed",
+        )
+
+    customer, error_response = _get_customer_or_error(request)
+    if error_response:
+        return error_response
+
+    order = get_object_or_404(
+        Order.objects.prefetch_related("details__product"),
+        pk=order_id,
+        customer=customer,
+    )
+
+    detail_rows = [
+        {
+            "product_name": detail.product.product_name,
+            "quantity": detail.quantity,
+            "unit_price_display": _format_currency_vnd(detail.unit_price),
+            "sub_total_display": _format_currency_vnd(detail.sub_total),
+        }
+        for detail in order.details.all()
+    ]
+
+    context = {
+        "order": order,
+        "detail_rows": detail_rows,
+        "sub_total_display": _format_currency_vnd(order.sub_total_amount),
+        "discount_display": _format_currency_vnd(order.discount_amount + order.coupon_discount_amount),
+        "total_display": _format_currency_vnd(order.total_amount),
+        "coupon_code_display": order.coupon_code or "-",
+    }
+    return render(request, "order_detail.html", context)
+
+
+@purchase_flow_guard
+def wallet_view(request):
+    if request.method != "GET":
+        return _json_error(
+            "Method khong duoc ho tro cho endpoint nay.",
+            status=405,
+            code="method_not_allowed",
+        )
+
+    customer, error_response = _get_customer_or_error(request)
+    if error_response:
+        return error_response
+
+    wallet = getattr(customer, "wallet", None)
+    balance = wallet.balance if wallet else 0
+
+    topup_rows = [
+        {
+            "id": row["id"],
+            "amount_display": _format_currency_vnd(row["amount"]),
+            "status": row["status"],
+            "note": row["note"] or "",
+        }
+        for row in TopUpRequest.objects.filter(customer=customer)
+        .order_by("-id")
+        .values("id", "amount", "status", "note")[:10]
+    ]
+
+    context = {
+        "balance_display": _format_currency_vnd(balance),
+        "topup_rows": topup_rows,
+        "has_topups": bool(topup_rows),
+    }
+    return render(request, "wallet_view.html", context)
 
 
 @purchase_flow_guard

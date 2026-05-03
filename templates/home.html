@@ -45,16 +45,17 @@
             <a class="text-sm text-slate-600 transition-colors hover:text-indigo-600" href="{% url 'login' %}">Yêu cầu nạp tiền</a>
             {% endif %}
             {% if request.user.is_authenticated and not request.user.is_staff %}
-            <a class="text-sm text-slate-600 transition-colors hover:text-indigo-600" href="#">Ví tiền</a>
-            <a class="text-sm text-slate-600 transition-colors hover:text-indigo-600" href="#">Giỏ hàng</a>
+            <a class="text-sm text-slate-600 transition-colors hover:text-indigo-600" href="{% url 'wallet_view' %}">Ví tiền</a>
+            <a class="text-sm text-slate-600 transition-colors hover:text-indigo-600" href="{% url 'cart_checkout' %}">Giỏ hàng</a>
+            <a class="text-sm text-slate-600 transition-colors hover:text-indigo-600" href="{% url 'orders_list' %}">Đơn hàng</a>
             {% endif %}
           </nav>
         </div>
         <div class="flex items-center gap-3">
           {% if request.user.is_authenticated and not request.user.is_staff %}
-          <button class="rounded-full p-2 text-slate-600 transition-colors hover:bg-slate-100" type="button">
+          <a class="rounded-full p-2 text-slate-600 transition-colors hover:bg-slate-100" href="{% url 'cart_checkout' %}">
             <span class="material-symbols-outlined">shopping_cart</span>
-          </button>
+          </a>
           {% endif %}
           {% if request.user.is_authenticated %}
           <a class="rounded-full bg-slate-100 px-4 py-2 text-sm font-semibold text-indigo-900 transition-colors hover:bg-indigo-50" href="{% url 'logout' %}">Đăng xuất</a>
@@ -151,6 +152,44 @@
           </div>
         </section>
       </div>
+
+      {% if request.user.is_authenticated and topup_section_title %}
+      <section class="mt-8 rounded-2xl bg-white p-8 shadow-sm">
+        <h2 class="font-headline text-2xl font-bold text-indigo-900">{{ topup_section_title }}</h2>
+        {% if has_topup_rows %}
+        <div class="mt-4 overflow-x-auto">
+          <table class="min-w-full divide-y divide-slate-200 text-sm">
+            <thead class="bg-slate-50">
+              <tr>
+                <th class="px-4 py-2 text-left font-semibold text-slate-600">Mã</th>
+                <th class="px-4 py-2 text-left font-semibold text-slate-600">Số tiền</th>
+                <th class="px-4 py-2 text-left font-semibold text-slate-600">Trạng thái</th>
+                <th class="px-4 py-2 text-left font-semibold text-slate-600">Ghi chú</th>
+                {% if request.user.is_staff %}
+                <th class="px-4 py-2 text-left font-semibold text-slate-600">Tài khoản</th>
+                {% endif %}
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              {% for row in topup_rows %}
+              <tr>
+                <td class="px-4 py-2">#{{ row.id }}</td>
+                <td class="px-4 py-2">{{ row.amount_display }}</td>
+                <td class="px-4 py-2">{{ row.status }}</td>
+                <td class="px-4 py-2">{{ row.note }}</td>
+                {% if request.user.is_staff %}
+                <td class="px-4 py-2">{{ row.username }}</td>
+                {% endif %}
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <p class="mt-3 text-sm text-slate-500">Chưa có dữ liệu nạp tiền để hiển thị.</p>
+        {% endif %}
+      </section>
+      {% endif %}
     </main>
 
     {# Footer thông tin chung + điều hướng phụ. #}
@@ -165,8 +204,10 @@
           <ul class="space-y-2 text-sm text-slate-500">
             <li><a class="hover:text-indigo-600" href="{% url 'home' %}">Trang chủ</a></li>
             {% if request.user.is_authenticated and not request.user.is_staff %}
-            <li><a class="hover:text-indigo-600" href="#">Giỏ hàng</a></li>
-            <li><a class="hover:text-indigo-600" href="#">Ví tiền</a></li>
+            <li><a class="hover:text-indigo-600" href="{% url 'topup_request' %}">Yêu cầu nạp tiền</a></li>
+            <li><a class="hover:text-indigo-600" href="{% url 'wallet_view' %}">Ví tiền</a></li>
+            <li><a class="hover:text-indigo-600" href="{% url 'cart_checkout' %}">Giỏ hàng</a></li>
+            <li><a class="hover:text-indigo-600" href="{% url 'orders_list' %}">Đơn hàng</a></li>
             {% endif %}
           </ul>
         </div>

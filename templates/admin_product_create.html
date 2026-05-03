@@ -58,7 +58,13 @@
             </a>
             {% endif %}
             {% if request.user.is_authenticated and not request.user.is_staff %}
-            <a class="text-sm text-slate-600 transition-colors hover:text-indigo-600" href="#">
+            <a class="text-sm text-slate-600 transition-colors hover:text-indigo-600" href="{% url 'wallet_view' %}">
+              Ví tiền
+            </a>
+            <a class="text-sm text-slate-600 transition-colors hover:text-indigo-600" href="{% url 'orders_list' %}">
+              Đơn hàng
+            </a>
+            <a class="text-sm text-slate-600 transition-colors hover:text-indigo-600" href="{% url 'cart_checkout' %}">
               Giỏ hàng
             </a>
             {% endif %}

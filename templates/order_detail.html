@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chi tiết đơn hàng</title>
+  </head>
+  <body>
+    <main>
+      <h1>Chi tiết đơn hàng #{{ order.id }}</h1>
+      {% include "partials/user_quick_menu.html" %}
+
+      <p><strong>Trạng thái:</strong> {{ order.status }}</p>
+      <p><strong>Mã giảm giá:</strong> {{ coupon_code_display }}</p>
+      <p><strong>Thời gian tạo:</strong> {{ order.created_at|date:"H:i d/m/Y" }}</p>
+
+      <table border="1" cellpadding="8" cellspacing="0">
+        <thead>
+          <tr>
+            <th>Sản phẩm</th>
+            <th>Số lượng</th>
+            <th>Đơn giá</th>
+            <th>Thành tiền</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in detail_rows %}
+          <tr>
+            <td>{{ row.product_name }}</td>
+            <td>{{ row.quantity }}</td>
+            <td>{{ row.unit_price_display }}</td>
+            <td>{{ row.sub_total_display }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="4">Đơn hàng chưa có dòng chi tiết.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      <p><strong>Tạm tính:</strong> {{ sub_total_display }}</p>
+      <p><strong>Giảm giá:</strong> {{ discount_display }}</p>
+      <p><strong>Tổng thanh toán:</strong> {{ total_display }}</p>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Danh sách đơn hàng</title>
+  </head>
+  <body>
+    <main>
+      <h1>Đơn hàng của tôi</h1>
+      {% include "partials/user_quick_menu.html" %}
+
+      {% if has_orders %}
+      <table border="1" cellpadding="8" cellspacing="0">
+        <thead>
+          <tr>
+            <th>Mã đơn</th>
+            <th>Trạng thái</th>
+            <th>Tổng tiền</th>
+            <th>Thời gian tạo</th>
+            <th>Chi tiết</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in order_rows %}
+          <tr>
+            <td>#{{ row.id }}</td>
+            <td>{{ row.status }}</td>
+            <td>{{ row.total_amount_display }}</td>
+            <td>{{ row.created_at|date:"H:i d/m/Y" }}</td>
+            <td><a href="{% url 'order_detail' row.id %}">Xem</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p>Bạn chưa có đơn hàng nào.</p>
+      {% endif %}
+    </main>
+  </body>
+</html>
