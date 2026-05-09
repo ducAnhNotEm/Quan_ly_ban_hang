@@ -440,7 +440,34 @@ def cart_view(request):
         return error_response
 
     cart, _ = Cart.objects.get_or_create(customer=customer)
-    return JsonResponse({"ok": True, "data": _cart_snapshot(cart)})
+    all_items = cart.items.select_related("product").order_by("id")
+
+    cart_rows = []
+    selected_subtotal = Decimal("0")
+
+    for item in all_items:
+        line_subtotal = item.sub_total or Decimal("0")
+        row = {
+            "product_id": item.product_id,
+            "product_name": item.product.product_name,
+            "image_url": item.product.image.url if item.product.image else None,
+            "quantity": item.quantity,
+            "stock_quantity": item.product.stock_quantity,
+            "is_selected": item.is_selected,
+            "unit_price_display": _format_currency_vnd(item.product.discounted_price),
+            "line_subtotal_display": _format_currency_vnd(line_subtotal),
+        }
+        cart_rows.append(row)
+
+        if item.is_selected:
+            selected_subtotal += line_subtotal
+
+    context = {
+        "cart_rows": cart_rows,
+        "has_cart_items": bool(cart_rows),
+        "subtotal_display": _format_currency_vnd(selected_subtotal),
+    }
+    return render(request, "cart.html", context)
 
 
 @purchase_flow_guard

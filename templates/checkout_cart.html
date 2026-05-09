@@ -31,62 +31,9 @@
         </form>
       </section>
 
-      {% if has_cart_items %}
       <section>
-        <h2>Gio hang hien tai</h2>
-        <table border="1" cellpadding="8" cellspacing="0">
-          <thead>
-            <tr>
-              <th>San pham</th>
-              <th>Da chon</th>
-              <th>So luong</th>
-              <th>Ton kho</th>
-              <th>Don gia</th>
-              <th>Thanh tien</th>
-              <th>Thao tac</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for row in cart_rows %}
-            <tr>
-              <td>{{ row.product_name }} (#{{ row.product_id }})</td>
-              <td>{% if row.is_selected %}Co{% else %}Khong{% endif %}</td>
-              <td>{{ row.quantity }}</td>
-              <td>{{ row.stock_quantity }}</td>
-              <td>{{ row.unit_price_display }}</td>
-              <td>{{ row.line_subtotal_display }}</td>
-              <td>
-                <form action="{% url 'cart_select' %}" method="post">
-                  {% csrf_token %}
-                  <input type="hidden" name="next" value="{{ request.get_full_path }}" />
-                  <input type="hidden" name="product_id" value="{{ row.product_id }}" />
-                  <input type="hidden" name="is_selected" value="{% if row.is_selected %}false{% else %}true{% endif %}" />
-                  <button type="submit">{% if row.is_selected %}Bo chon{% else %}Chon{% endif %}</button>
-                </form>
-
-                <form action="{% url 'cart_update' %}" method="post">
-                  {% csrf_token %}
-                  <input type="hidden" name="next" value="{{ request.get_full_path }}" />
-                  <input type="hidden" name="product_id" value="{{ row.product_id }}" />
-                  <input name="quantity" type="number" min="1" max="{{ row.stock_quantity }}" value="{{ row.quantity }}" required />
-                  <button type="submit">Cap nhat</button>
-                </form>
-
-                <form action="{% url 'cart_remove' %}" method="post">
-                  {% csrf_token %}
-                  <input type="hidden" name="next" value="{{ request.get_full_path }}" />
-                  <input type="hidden" name="product_id" value="{{ row.product_id }}" />
-                  <button type="submit">Xoa</button>
-                </form>
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+        <p><a href="{% url 'cart_view' %}">&laquo; Quay lại Giỏ hàng</a></p>
       </section>
-      {% else %}
-      <p>Gio hang dang trong.</p>
-      {% endif %}
 
       <section>
         <h2>Cac san pham dang chon de checkout</h2>

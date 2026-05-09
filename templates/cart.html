@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Giỏ hàng</title>
+  </head>
+  <body>
+    <main>
+      <h1>Quản lý Giỏ hàng</h1>
+      {% include "partials/user_quick_menu.html" %}
+
+      {% if messages %}
+      <section>
+        {% for message in messages %}
+        <p><strong>{{ message.tags|default:"info" }}:</strong> {{ message }}</p>
+        {% endfor %}
+      </section>
+      {% endif %}
+
+      {% if has_cart_items %}
+      <section>
+        <table border="1" cellpadding="8" cellspacing="0">
+          <thead>
+            <tr>
+              <th>Ảnh</th>
+              <th>Sản phẩm</th>
+              <th>Đã chọn</th>
+              <th>Số lượng</th>
+              <th>Tồn kho</th>
+              <th>Đơn giá</th>
+              <th>Thành tiền</th>
+              <th>Thao tác</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in cart_rows %}
+            <tr>
+              <td>
+                {% if row.image_url %}
+                <img src="{{ row.image_url }}" alt="{{ row.product_name }}" width="50" height="50" />
+                {% else %}
+                <span>No Image</span>
+                {% endif %}
+              </td>
+              <td>{{ row.product_name }} (#{{ row.product_id }})</td>
+              <td>{% if row.is_selected %}Có{% else %}Không{% endif %}</td>
+              <td>{{ row.quantity }}</td>
+              <td>{{ row.stock_quantity }}</td>
+              <td>{{ row.unit_price_display }}</td>
+              <td>{{ row.line_subtotal_display }}</td>
+              <td>
+                <!-- Nút chọn/bỏ chọn -->
+                <form action="{% url 'cart_select' %}" method="post" style="display:inline-block;">
+                  {% csrf_token %}
+                  <input type="hidden" name="next" value="{{ request.get_full_path }}" />
+                  <input type="hidden" name="product_id" value="{{ row.product_id }}" />
+                  <input type="hidden" name="is_selected" value="{% if row.is_selected %}false{% else %}true{% endif %}" />
+                  <button type="submit">{% if row.is_selected %}Bỏ chọn{% else %}Chọn{% endif %}</button>
+                </form>
+
+                <!-- Form cập nhật số lượng -->
+                <form action="{% url 'cart_update' %}" method="post" style="display:inline-block;">
+                  {% csrf_token %}
+                  <input type="hidden" name="next" value="{{ request.get_full_path }}" />
+                  <input type="hidden" name="product_id" value="{{ row.product_id }}" />
+                  <input name="quantity" type="number" min="1" max="{{ row.stock_quantity }}" value="{{ row.quantity }}" required style="width: 60px;" />
+                  <button type="submit">Cập nhật</button>
+                </form>
+
+                <!-- Nút xóa -->
+                <form action="{% url 'cart_remove' %}" method="post" style="display:inline-block;">
+                  {% csrf_token %}
+                  <input type="hidden" name="next" value="{{ request.get_full_path }}" />
+                  <input type="hidden" name="product_id" value="{{ row.product_id }}" />
+                  <button type="submit">Xóa</button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        
+        <div style="margin-top: 20px;">
+            <h3>Tổng tiền (các item được chọn): {{ subtotal_display }}</h3>
+            <a href="{% url 'cart_checkout' %}">
+                <button type="button">Đi tới thanh toán</button>
+            </a>
+        </div>
+
+      </section>
+      {% else %}
+      <p>Giỏ hàng đang trống.</p>
+      {% endif %}
+
+    </main>
+  </body>
+</html>

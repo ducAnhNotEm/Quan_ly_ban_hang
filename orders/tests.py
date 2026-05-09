@@ -1,4 +1,4 @@
-﻿from decimal import Decimal
+from decimal import Decimal
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
@@ -222,7 +222,6 @@ class CheckoutRoutePermissionSmokeTests(TestCase):
         CartItem.objects.create(cart=cart, product=self.product, quantity=1, is_selected=True)
 
         self.route_cases = [
-            ("cart_view", "get", None),
             ("cart_add", "post", {"product_id": self.product.id, "quantity": 1}),
             ("cart_update", "post", {"product_id": self.product.id, "quantity": 2}),
             ("cart_select", "post", {"product_id": self.product.id, "is_selected": False}),
@@ -270,9 +269,6 @@ class CheckoutRoutePermissionSmokeTests(TestCase):
             self.assertEqual(response.status_code, 200)
             payload_json = response.json()
             self.assertEqual(payload_json["ok"], True)
-
-        cart_view_payload = self.client.get(reverse("cart_view")).json()
-        self.assertEqual(cart_view_payload["data"]["checkout"]["source"], "CART")
 
         buy_now_payload = self.client.post(
             reverse("buy_now_prepare"),
@@ -335,6 +331,20 @@ class CartMutationTests(TestCase):
 
         item = CartItem.objects.get(cart=self.cart, product=self.product_b)
         self.assertEqual(item.quantity, 1)
+        self.assertTrue(item.is_selected)
+
+    def test_cart_add_increases_quantity_if_exists(self):
+        response = self.client.post(
+            reverse("cart_add"),
+            data={"product_id": self.product_a.id, "quantity": 2},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["ok"], True)
+
+        item = CartItem.objects.get(cart=self.cart, product=self.product_a)
+        self.assertEqual(item.quantity, 4)  # Ban đầu có 2, cộng thêm 2
         self.assertTrue(item.is_selected)
 
     def test_cart_update_success(self):
@@ -471,6 +481,7 @@ class CheckoutPageRenderLoginRequiredSmokeTests(TestCase):
         )
 
         self.page_cases = [
+            ("cart_view", {}, {}, "cart.html", "Giỏ hàng"),
             ("cart_checkout", {}, {"discount_code": "SALE10"}, "checkout_cart.html", "Checkout - CART"),
             (
                 "buy_now_checkout",
@@ -506,14 +517,15 @@ class CheckoutPageRenderLoginRequiredSmokeTests(TestCase):
             self.assertTemplateUsed(response, template_name)
             self.assertContains(response, heading_text)
 
-        cart_page = self._get_page_response("cart_checkout", {}, {"discount_code": "VIP50"})
-        self.assertContains(cart_page, 'name="discount_code"')
-        self.assertContains(cart_page, f'action="{reverse("cart_checkout")}"')
-        self.assertContains(cart_page, f'action="{reverse("cart_add")}"')
-        self.assertContains(cart_page, f'action="{reverse("cart_update")}"')
-        self.assertContains(cart_page, f'action="{reverse("cart_remove")}"')
-        self.assertContains(cart_page, f'action="{reverse("cart_select")}"')
-        self.assertContains(cart_page, 'name="next"')
+        cart_checkout_page = self._get_page_response("cart_checkout", {}, {"discount_code": "VIP50"})
+        self.assertContains(cart_checkout_page, 'name="discount_code"')
+        self.assertContains(cart_checkout_page, f'action="{reverse("cart_checkout")}"')
+
+        cart_view_page = self._get_page_response("cart_view", {}, {})
+        self.assertContains(cart_view_page, f'action="{reverse("cart_update")}"')
+        self.assertContains(cart_view_page, f'action="{reverse("cart_remove")}"')
+        self.assertContains(cart_view_page, f'action="{reverse("cart_select")}"')
+        self.assertContains(cart_view_page, 'name="next"')
 
         buy_now_page = self._get_page_response(
             "buy_now_checkout",
