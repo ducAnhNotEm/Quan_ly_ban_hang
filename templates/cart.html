@@ -1,98 +1,112 @@
-<!DOCTYPE html>
-<html lang="vi">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Giỏ hàng</title>
-  </head>
-  <body>
-    <main>
-      <h1>Quản lý Giỏ hàng</h1>
-      {% include "partials/user_quick_menu.html" %}
+{% extends 'base.html' %}
+{% load static %}
 
-      {% if messages %}
-      <section>
-        {% for message in messages %}
-        <p><strong>{{ message.tags|default:"info" }}:</strong> {{ message }}</p>
-        {% endfor %}
-      </section>
-      {% endif %}
+{% block title %}Giỏ hàng - Sales Store{% endblock %}
 
-      {% if has_cart_items %}
-      <section>
-        <table border="1" cellpadding="8" cellspacing="0">
-          <thead>
-            <tr>
-              <th>Ảnh</th>
-              <th>Sản phẩm</th>
-              <th>Đã chọn</th>
-              <th>Số lượng</th>
-              <th>Tồn kho</th>
-              <th>Đơn giá</th>
-              <th>Thành tiền</th>
-              <th>Thao tác</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for row in cart_rows %}
-            <tr>
-              <td>
-                {% if row.image_url %}
-                <img src="{{ row.image_url }}" alt="{{ row.product_name }}" width="50" height="50" />
-                {% else %}
-                <span>No Image</span>
+{% block content %}
+<section class="rounded-2xl bg-white p-8 shadow-sm">
+  <div class="mb-6 flex items-center justify-between">
+    <h1 class="font-headline text-2xl font-bold text-indigo-900">Giỏ hàng của bạn</h1>
+    <a href="{% url 'home' %}" class="text-sm font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-1">
+      <span class="material-symbols-outlined text-sm">add_shopping_cart</span>
+      Tiếp tục mua sắm
+    </a>
+  </div>
+
+  {% if has_cart_items %}
+  <div class="overflow-x-auto rounded-xl border border-slate-200">
+    <table class="w-full text-left text-sm">
+      <thead class="bg-slate-50 text-slate-500">
+        <tr>
+          <th class="px-6 py-4 font-semibold uppercase tracking-wider">Chọn</th>
+          <th class="px-6 py-4 font-semibold uppercase tracking-wider">Sản phẩm</th>
+          <th class="px-6 py-4 font-semibold uppercase tracking-wider text-center">Số lượng</th>
+          <th class="px-6 py-4 font-semibold uppercase tracking-wider">Đơn giá</th>
+          <th class="px-6 py-4 font-semibold uppercase tracking-wider text-right">Thành tiền</th>
+          <th class="px-6 py-4 font-semibold uppercase tracking-wider text-center">Thao tác</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100 bg-white text-slate-700">
+        {% for row in cart_rows %}
+        <tr class="hover:bg-slate-50 transition-colors">
+          <td class="px-6 py-4 text-center">
+            <form action="{% url 'cart_select' %}" method="post">
+              {% csrf_token %}
+              <input type="hidden" name="next" value="{{ request.get_full_path }}" />
+              <input type="hidden" name="product_id" value="{{ row.product_id }}" />
+              <input type="hidden" name="is_selected" value="{% if row.is_selected %}false{% else %}true{% endif %}" />
+              <button type="submit" class="flex h-5 w-5 mx-auto items-center justify-center rounded border {% if row.is_selected %}border-indigo-600 bg-indigo-600{% else %}border-slate-300 bg-white{% endif %}">
+                {% if row.is_selected %}
+                <span class="material-symbols-outlined text-white text-[14px]">check</span>
                 {% endif %}
-              </td>
-              <td>{{ row.product_name }} (#{{ row.product_id }})</td>
-              <td>{% if row.is_selected %}Có{% else %}Không{% endif %}</td>
-              <td>{{ row.quantity }}</td>
-              <td>{{ row.stock_quantity }}</td>
-              <td>{{ row.unit_price_display }}</td>
-              <td>{{ row.line_subtotal_display }}</td>
-              <td>
-                <!-- Nút chọn/bỏ chọn -->
-                <form action="{% url 'cart_select' %}" method="post" style="display:inline-block;">
-                  {% csrf_token %}
-                  <input type="hidden" name="next" value="{{ request.get_full_path }}" />
-                  <input type="hidden" name="product_id" value="{{ row.product_id }}" />
-                  <input type="hidden" name="is_selected" value="{% if row.is_selected %}false{% else %}true{% endif %}" />
-                  <button type="submit">{% if row.is_selected %}Bỏ chọn{% else %}Chọn{% endif %}</button>
-                </form>
-
-                <!-- Form cập nhật số lượng -->
-                <form action="{% url 'cart_update' %}" method="post" style="display:inline-block;">
-                  {% csrf_token %}
-                  <input type="hidden" name="next" value="{{ request.get_full_path }}" />
-                  <input type="hidden" name="product_id" value="{{ row.product_id }}" />
-                  <input name="quantity" type="number" min="1" max="{{ row.stock_quantity }}" value="{{ row.quantity }}" required style="width: 60px;" />
-                  <button type="submit">Cập nhật</button>
-                </form>
-
-                <!-- Nút xóa -->
-                <form action="{% url 'cart_remove' %}" method="post" style="display:inline-block;">
-                  {% csrf_token %}
-                  <input type="hidden" name="next" value="{{ request.get_full_path }}" />
-                  <input type="hidden" name="product_id" value="{{ row.product_id }}" />
-                  <button type="submit">Xóa</button>
-                </form>
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-        
-        <div style="margin-top: 20px;">
-            <h3>Tổng tiền (các item được chọn): {{ subtotal_display }}</h3>
-            <a href="{% url 'cart_checkout' %}">
-                <button type="button">Đi tới thanh toán</button>
-            </a>
-        </div>
-
-      </section>
-      {% else %}
-      <p>Giỏ hàng đang trống.</p>
-      {% endif %}
-
-    </main>
-  </body>
-</html>
+              </button>
+            </form>
+          </td>
+          <td class="px-6 py-4">
+            <div class="flex items-center gap-4">
+              <div class="h-16 w-16 overflow-hidden rounded-lg border border-slate-100 bg-slate-50 flex-shrink-0">
+                {% if row.image_url %}
+                <img src="{{ row.image_url }}" alt="{{ row.product_name }}" class="h-full w-full object-cover">
+                {% else %}
+                <div class="flex h-full w-full items-center justify-center text-slate-300">
+                  <span class="material-symbols-outlined">image</span>
+                </div>
+                {% endif %}
+              </div>
+              <div>
+                <a href="{% url 'products:detail' row.product_id %}" class="font-semibold text-indigo-900 hover:text-indigo-600 transition-colors">{{ row.product_name }}</a>
+                <p class="text-xs text-slate-500 mt-1">Kho: {{ row.stock_quantity }}</p>
+              </div>
+            </div>
+          </td>
+          <td class="px-6 py-4">
+            <form action="{% url 'cart_update' %}" method="post" class="flex items-center justify-center gap-2">
+              {% csrf_token %}
+              <input type="hidden" name="next" value="{{ request.get_full_path }}" />
+              <input type="hidden" name="product_id" value="{{ row.product_id }}" />
+              <input name="quantity" type="number" min="1" max="{{ row.stock_quantity }}" value="{{ row.quantity }}" required class="w-16 rounded-lg border-slate-300 px-2 py-1 text-center text-sm focus:border-indigo-500 focus:ring-indigo-500" />
+              <button type="submit" class="text-indigo-600 hover:text-indigo-800" title="Cập nhật">
+                <span class="material-symbols-outlined text-[20px]">sync</span>
+              </button>
+            </form>
+          </td>
+          <td class="px-6 py-4">{{ row.unit_price_display }}</td>
+          <td class="px-6 py-4 text-right font-bold text-indigo-700">{{ row.line_subtotal_display }}</td>
+          <td class="px-6 py-4 text-center">
+            <form action="{% url 'cart_remove' %}" method="post">
+              {% csrf_token %}
+              <input type="hidden" name="next" value="{{ request.get_full_path }}" />
+              <input type="hidden" name="product_id" value="{{ row.product_id }}" />
+              <button type="submit" class="text-red-500 hover:text-red-700 p-1 rounded transition-colors hover:bg-red-50" title="Xóa">
+                <span class="material-symbols-outlined text-[20px]">delete</span>
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  
+  <div class="mt-8 flex flex-col items-end gap-4 border-t border-slate-100 pt-6">
+    <div class="text-right">
+      <p class="mb-1 text-sm text-slate-500 uppercase tracking-wider font-semibold">Tạm tính (chỉ tính sản phẩm đã chọn)</p>
+      <p class="font-headline text-3xl font-extrabold text-indigo-900">{{ subtotal_display }}</p>
+    </div>
+    <a href="{% url 'cart_checkout' %}" class="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-8 py-4 text-lg font-bold text-white shadow-md transition-all hover:bg-indigo-700 hover:shadow-lg focus:outline-none focus:ring-4 focus:ring-indigo-100">
+      Tiến hành thanh toán
+      <span class="material-symbols-outlined ml-2">arrow_forward</span>
+    </a>
+  </div>
+  {% else %}
+  <div class="py-16 text-center">
+    <div class="mb-4 inline-flex h-20 w-20 items-center justify-center rounded-full bg-slate-100 text-slate-400">
+      <span class="material-symbols-outlined text-4xl">shopping_cart</span>
+    </div>
+    <h3 class="mb-2 font-headline text-xl font-bold text-indigo-900">Giỏ hàng trống</h3>
+    <p class="mb-8 text-slate-500">Bạn chưa chọn sản phẩm nào vào giỏ hàng.</p>
+    <a href="{% url 'home' %}" class="inline-block rounded-xl bg-indigo-600 px-8 py-3 text-sm font-bold text-white transition-colors hover:bg-indigo-700 shadow-md hover:shadow-lg">Khám phá sản phẩm ngay</a>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

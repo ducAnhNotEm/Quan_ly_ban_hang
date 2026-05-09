@@ -9,8 +9,9 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
 
+from django.db import transaction
 from accounts.models import TopUpRequest
-from orders.models import Order
+from orders.models import Order, OrderDetail
 from products.models import Cart, CartItem, Product
 
 """
@@ -785,3 +786,81 @@ def buy_now_prepare(request):
             },
         }
     )
+
+@purchase_flow_guard
+def confirm_order(request):
+    method_error = _ensure_post(request)
+    if method_error:
+        # Neu form submit sai method, quay ve trang chu
+        return redirect("home")
+
+    customer, error_response = _get_customer_or_error(request)
+    if error_response:
+        return redirect("home")
+
+    payload = _parse_request_data(request)
+    source = payload.get("source") # "CART" or "BUY_NOW"
+    
+    with transaction.atomic():
+        if source == "CART":
+            cart, _ = Cart.objects.get_or_create(customer=customer)
+            selected_items = list(cart.items.select_related("product").filter(is_selected=True))
+            if not selected_items:
+                messages.error(request, "Khong co san pham nao duoc chon trong gio hang.")
+                return redirect("cart_view")
+                
+            order = Order.objects.create(customer=customer)
+            for item in selected_items:
+                product = item.product
+                if item.quantity > product.stock_quantity:
+                    messages.error(request, _stock_exceeds_message(item.quantity, product.stock_quantity))
+                    return redirect("cart_checkout")
+                
+                OrderDetail.objects.create(
+                    order=order,
+                    product=product,
+                    quantity=item.quantity,
+                    unit_price=product.price,
+                    discount_percent=product.discount_percent
+                )
+                product.stock_quantity -= item.quantity
+                product.save(update_fields=["stock_quantity"])
+                
+            order.recalculate_totals()
+            # Xoa gio hang sau khi mua thanh cong
+            cart.items.filter(is_selected=True).delete()
+            
+            messages.success(request, "Dat hang thanh cong tu gio hang!")
+            return redirect("order_detail", order_id=order.id)
+            
+        elif source == "BUY_NOW":
+            product_id = _parse_positive_int(payload, "product_id")
+            quantity = _parse_positive_int(payload, "quantity")
+            
+            if not product_id or not quantity:
+                messages.error(request, "Thong tin san pham khong hop le.")
+                return redirect("home")
+                
+            product = get_object_or_404(Product, pk=product_id)
+            if quantity > product.stock_quantity:
+                messages.error(request, _stock_exceeds_message(quantity, product.stock_quantity))
+                return redirect(f"{reverse('buy_now_checkout')}?product_id={product_id}&quantity={quantity}")
+                
+            order = Order.objects.create(customer=customer)
+            OrderDetail.objects.create(
+                order=order,
+                product=product,
+                quantity=quantity,
+                unit_price=product.price,
+                discount_percent=product.discount_percent
+            )
+            product.stock_quantity -= quantity
+            product.save(update_fields=["stock_quantity"])
+            order.recalculate_totals()
+            
+            messages.success(request, "Dat hang thanh cong (Mua ngay)!")
+            return redirect("order_detail", order_id=order.id)
+            
+        else:
+            messages.error(request, "Nguon thanh toan khong hop le.")
+            return redirect("home")

@@ -1,47 +1,71 @@
-<!DOCTYPE html>
-<html lang="vi">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Chi tiết đơn hàng</title>
-  </head>
-  <body>
-    <main>
-      <h1>Chi tiết đơn hàng #{{ order.id }}</h1>
-      {% include "partials/user_quick_menu.html" %}
+{% extends 'base.html' %}
+{% load static %}
 
-      <p><strong>Trạng thái:</strong> {{ order.status }}</p>
-      <p><strong>Mã giảm giá:</strong> {{ coupon_code_display }}</p>
-      <p><strong>Thời gian tạo:</strong> {{ order.created_at|date:"H:i d/m/Y" }}</p>
+{% block title %}Chi tiết đơn hàng #{{ order.id }} - Sales Store{% endblock %}
 
-      <table border="1" cellpadding="8" cellspacing="0">
-        <thead>
-          <tr>
-            <th>Sản phẩm</th>
-            <th>Số lượng</th>
-            <th>Đơn giá</th>
-            <th>Thành tiền</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for row in detail_rows %}
-          <tr>
-            <td>{{ row.product_name }}</td>
-            <td>{{ row.quantity }}</td>
-            <td>{{ row.unit_price_display }}</td>
-            <td>{{ row.sub_total_display }}</td>
-          </tr>
-          {% empty %}
-          <tr>
-            <td colspan="4">Đơn hàng chưa có dòng chi tiết.</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+{% block content %}
+<section class="rounded-2xl bg-white p-8 shadow-sm max-w-4xl mx-auto">
+  <div class="mb-6 flex items-center justify-between">
+    <h1 class="font-headline text-2xl font-bold text-indigo-900">Hóa đơn điện tử #{{ order.id }}</h1>
+    <a href="{% url 'orders_list' %}" class="text-sm font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-1">
+      <span class="material-symbols-outlined text-sm">arrow_back</span>
+      Danh sách đơn hàng
+    </a>
+  </div>
 
-      <p><strong>Tạm tính:</strong> {{ sub_total_display }}</p>
-      <p><strong>Giảm giá:</strong> {{ discount_display }}</p>
-      <p><strong>Tổng thanh toán:</strong> {{ total_display }}</p>
-    </main>
-  </body>
-</html>
+  <div class="mb-8 grid grid-cols-1 md:grid-cols-2 gap-4 rounded-xl bg-slate-50 p-6 border border-slate-100">
+    <div>
+      <p class="text-sm text-slate-500 mb-1">Trạng thái thanh toán</p>
+      <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold {% if order.status == 'PAID' %}bg-green-100 text-green-800{% elif order.status == 'CANCELLED' %}bg-red-100 text-red-800{% else %}bg-slate-200 text-slate-800{% endif %}">
+        {{ order.status }}
+      </span>
+    </div>
+    <div>
+      <p class="text-sm text-slate-500 mb-1">Thời gian tạo</p>
+      <p class="font-semibold text-slate-900">{{ order.created_at|date:"H:i d/m/Y" }}</p>
+    </div>
+  </div>
+
+  <div class="mb-8 overflow-hidden rounded-xl border border-slate-200">
+    <table class="w-full text-left text-sm">
+      <thead class="bg-slate-50 text-slate-500">
+        <tr>
+          <th class="px-6 py-4 font-semibold uppercase tracking-wider">Sản phẩm</th>
+          <th class="px-6 py-4 font-semibold uppercase tracking-wider text-center">Số lượng</th>
+          <th class="px-6 py-4 font-semibold uppercase tracking-wider text-right">Đơn giá</th>
+          <th class="px-6 py-4 font-semibold uppercase tracking-wider text-right">Thành tiền</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100 bg-white text-slate-700">
+        {% for row in detail_rows %}
+        <tr class="hover:bg-slate-50 transition-colors">
+          <td class="px-6 py-4 font-medium">{{ row.product_name }}</td>
+          <td class="px-6 py-4 text-center">{{ row.quantity }}</td>
+          <td class="px-6 py-4 text-right">{{ row.unit_price_display }}</td>
+          <td class="px-6 py-4 text-right font-bold text-slate-900">{{ row.sub_total_display }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="4" class="px-6 py-4 text-center text-slate-500">Đơn hàng chưa có dòng chi tiết.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  
+  <div class="flex flex-col items-end gap-2 border-t border-slate-100 pt-6">
+    <div class="flex w-full sm:w-1/2 justify-between py-2 text-sm text-slate-600">
+      <span>Tạm tính:</span>
+      <span class="font-semibold">{{ sub_total_display }}</span>
+    </div>
+    <div class="flex w-full sm:w-1/2 justify-between py-2 text-sm text-red-600">
+      <span>Giảm giá{% if order.coupon_code %} (Mã: {{ coupon_code_display }}){% endif %}:</span>
+      <span class="font-semibold">-{{ discount_display }}</span>
+    </div>
+    <div class="flex w-full sm:w-1/2 justify-between border-t border-slate-200 py-3 text-lg">
+      <span class="font-bold text-slate-900">Tổng thanh toán:</span>
+      <span class="font-headline font-extrabold text-indigo-700">{{ total_display }}</span>
+    </div>
+  </div>
+</section>
+{% endblock %}

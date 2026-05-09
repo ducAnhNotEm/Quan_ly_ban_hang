@@ -1,82 +1,64 @@
-<!DOCTYPE html>
-<html lang="vi">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Checkout gio hang</title>
-  </head>
-  <body>
-    <main>
-      <h1>Checkout - {{ checkout_source }}</h1>
-      {% include "partials/user_quick_menu.html" %}
+{% extends 'base.html' %}
+{% load static %}
 
-      {% if messages %}
-      <section>
-        {% for message in messages %}
-        <p><strong>{{ message.tags|default:"info" }}:</strong> {{ message }}</p>
+{% block title %}Thanh toán Giỏ hàng - Sales Store{% endblock %}
+
+{% block content %}
+<section class="rounded-2xl bg-white p-8 shadow-sm max-w-4xl mx-auto">
+  <div class="mb-6 flex items-center justify-between">
+    <h1 class="font-headline text-2xl font-bold text-indigo-900">Xác nhận đơn hàng (Giỏ hàng)</h1>
+    <a href="{% url 'cart_view' %}" class="text-sm font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-1">
+      <span class="material-symbols-outlined text-sm">arrow_back</span>
+      Quay lại Giỏ hàng
+    </a>
+  </div>
+
+  {% if has_items %}
+  <div class="mb-8 overflow-hidden rounded-xl border border-slate-200">
+    <table class="w-full text-left text-sm">
+      <thead class="bg-slate-50 text-slate-500">
+        <tr>
+          <th class="px-6 py-4 font-semibold uppercase tracking-wider">Sản phẩm</th>
+          <th class="px-6 py-4 font-semibold uppercase tracking-wider">Số lượng</th>
+          <th class="px-6 py-4 font-semibold uppercase tracking-wider">Đơn giá</th>
+          <th class="px-6 py-4 font-semibold uppercase tracking-wider text-right">Thành tiền</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100 bg-white text-slate-700">
+        {% for row in item_rows %}
+        <tr>
+          <td class="px-6 py-4 font-medium">{{ row.product_name }}</td>
+          <td class="px-6 py-4">{{ row.quantity }}</td>
+          <td class="px-6 py-4">{{ row.unit_price_display }}</td>
+          <td class="px-6 py-4 text-right font-bold text-indigo-700">{{ row.line_subtotal_display }}</td>
+        </tr>
         {% endfor %}
-      </section>
-      {% endif %}
+      </tbody>
+    </table>
+  </div>
+  
+  <div class="flex flex-col items-end gap-6 border-t border-slate-100 pt-6">
+    <div class="text-right">
+      <p class="mb-1 text-sm text-slate-500 uppercase tracking-wider font-semibold">Tổng thanh toán</p>
+      <p class="font-headline text-3xl font-extrabold text-indigo-900">{{ subtotal_display }}</p>
+    </div>
 
-      <section>
-        <h2>Them san pham vao gio</h2>
-        <form action="{% url 'cart_add' %}" method="post">
-          {% csrf_token %}
-          <input type="hidden" name="next" value="{{ request.get_full_path }}" />
-          <label for="add_product_id"><strong>Product ID:</strong></label>
-          <input id="add_product_id" name="product_id" type="number" min="1" required />
-          <label for="add_quantity"><strong>So luong:</strong></label>
-          <input id="add_quantity" name="quantity" type="number" min="1" required value="1" />
-          <button type="submit">Them vao gio</button>
-        </form>
-      </section>
-
-      <section>
-        <p><a href="{% url 'cart_view' %}">&laquo; Quay lại Giỏ hàng</a></p>
-      </section>
-
-      <section>
-        <h2>Cac san pham dang chon de checkout</h2>
-        {% if has_items %}
-        <table border="1" cellpadding="8" cellspacing="0">
-          <thead>
-            <tr>
-              <th>San pham</th>
-              <th>So luong</th>
-              <th>Don gia</th>
-              <th>Thanh tien</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for row in item_rows %}
-            <tr>
-              <td>{{ row.product_name }} (#{{ row.product_id }})</td>
-              <td>{{ row.quantity }}</td>
-              <td>{{ row.unit_price_display }}</td>
-              <td>{{ row.line_subtotal_display }}</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-        <p><strong>Tam tinh:</strong> {{ subtotal_display }}</p>
-        {% else %}
-        <p>Chua co san pham nao duoc chon trong gio hang.</p>
-        {% endif %}
-      </section>
-
-      <section>
-        <form action="{% url 'cart_checkout' %}" method="get">
-          <label for="discount_code"><strong>Ma giam gia:</strong></label>
-          <input
-            id="discount_code"
-            name="discount_code"
-            type="text"
-            value="{{ discount_code_input }}"
-            placeholder="Nhap ma giam gia"
-          />
-          <button type="submit">Ap dung</button>
-        </form>
-      </section>
-    </main>
-  </body>
-</html>
+    <form action="{% url 'confirm_order' %}" method="POST" class="w-full sm:w-auto">
+      {% csrf_token %}
+      <input type="hidden" name="source" value="CART">
+      <button type="submit" class="w-full sm:w-auto rounded-xl bg-indigo-600 px-8 py-4 text-lg font-bold text-white shadow-md transition-all hover:bg-indigo-700 hover:shadow-lg focus:outline-none focus:ring-4 focus:ring-indigo-100">
+        Xác nhận đặt hàng
+      </button>
+    </form>
+  </div>
+  {% else %}
+  <div class="py-12 text-center">
+    <div class="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 text-slate-400">
+      <span class="material-symbols-outlined text-3xl">remove_shopping_cart</span>
+    </div>
+    <p class="text-slate-500">Chưa có sản phẩm nào được chọn trong giỏ hàng.</p>
+    <a href="{% url 'cart_view' %}" class="mt-6 inline-block rounded-lg border border-indigo-600 px-6 py-2 text-sm font-semibold text-indigo-600 transition-colors hover:bg-indigo-50">Vào Giỏ hàng</a>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

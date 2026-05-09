@@ -1,42 +1,70 @@
-<!DOCTYPE html>
-<html lang="vi">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Ví tiền</title>
-  </head>
-  <body>
-    <main>
-      <h1>Ví tiền</h1>
-      {% include "partials/user_quick_menu.html" %}
+{% extends 'base.html' %}
+{% load static %}
 
-      <p><strong>Số dư hiện tại:</strong> {{ balance_display }}</p>
+{% block title %}Ví tiền - Sales Store{% endblock %}
 
-      <h2>Lịch sử yêu cầu nạp tiền gần đây</h2>
-      {% if has_topups %}
-      <table border="1" cellpadding="8" cellspacing="0">
-        <thead>
-          <tr>
-            <th>Mã yêu cầu</th>
-            <th>Số tiền</th>
-            <th>Trạng thái</th>
-            <th>Ghi chú</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for row in topup_rows %}
-          <tr>
-            <td>#{{ row.id }}</td>
-            <td>{{ row.amount_display }}</td>
-            <td>{{ row.status }}</td>
-            <td>{{ row.note }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-      {% else %}
-      <p>Chưa có yêu cầu nạp tiền nào.</p>
-      {% endif %}
-    </main>
-  </body>
-</html>
+{% block content %}
+<section class="rounded-2xl bg-white p-8 shadow-sm max-w-5xl mx-auto">
+  <div class="mb-6 flex items-center justify-between">
+    <h1 class="font-headline text-2xl font-bold text-indigo-900">Ví tiền điện tử</h1>
+    <a href="{% url 'topup_request' %}" class="inline-flex items-center gap-1 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 transition-colors">
+      <span class="material-symbols-outlined text-[18px]">add_card</span>
+      Nạp tiền ngay
+    </a>
+  </div>
+
+  <div class="mb-10 flex items-center gap-6 rounded-2xl bg-gradient-to-r from-indigo-600 to-indigo-800 p-8 text-white shadow-lg relative overflow-hidden">
+    <div class="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white opacity-10"></div>
+    <div class="absolute right-20 -bottom-10 h-32 w-32 rounded-full bg-white opacity-10"></div>
+    
+    <div class="flex h-16 w-16 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm z-10">
+      <span class="material-symbols-outlined text-4xl">account_balance_wallet</span>
+    </div>
+    <div class="z-10">
+      <p class="text-sm font-semibold uppercase tracking-wider text-indigo-100 mb-1">Số dư hiện tại</p>
+      <p class="font-headline text-4xl font-extrabold">{{ balance_display }}</p>
+    </div>
+  </div>
+
+  <h2 class="font-headline text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
+    <span class="material-symbols-outlined text-slate-500">history</span>
+    Lịch sử nạp tiền gần đây
+  </h2>
+  
+  {% if has_topups %}
+  <div class="overflow-x-auto rounded-xl border border-slate-200">
+    <table class="w-full text-left text-sm">
+      <thead class="bg-slate-50 text-slate-500">
+        <tr>
+          <th class="px-6 py-4 font-semibold uppercase tracking-wider">Mã YC</th>
+          <th class="px-6 py-4 font-semibold uppercase tracking-wider">Số tiền</th>
+          <th class="px-6 py-4 font-semibold uppercase tracking-wider">Trạng thái</th>
+          <th class="px-6 py-4 font-semibold uppercase tracking-wider">Ghi chú</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100 bg-white text-slate-700">
+        {% for row in topup_rows %}
+        <tr class="hover:bg-slate-50 transition-colors">
+          <td class="px-6 py-4 font-medium">#{{ row.id }}</td>
+          <td class="px-6 py-4 font-bold text-slate-900">{{ row.amount_display }}</td>
+          <td class="px-6 py-4">
+            <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold {% if row.status == 'APPROVED' %}bg-green-100 text-green-800{% elif row.status == 'REJECTED' %}bg-red-100 text-red-800{% else %}bg-yellow-100 text-yellow-800{% endif %}">
+              {{ row.status }}
+            </span>
+          </td>
+          <td class="px-6 py-4 text-slate-500">{{ row.note|default:"-" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="py-12 text-center rounded-xl border border-dashed border-slate-300 bg-slate-50">
+    <div class="mb-3 inline-flex h-12 w-12 items-center justify-center rounded-full bg-slate-200 text-slate-500">
+      <span class="material-symbols-outlined text-2xl">pending_actions</span>
+    </div>
+    <p class="text-slate-600 font-medium">Bạn chưa có yêu cầu nạp tiền nào.</p>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

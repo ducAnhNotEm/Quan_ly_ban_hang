@@ -482,17 +482,17 @@ class CheckoutPageRenderLoginRequiredSmokeTests(TestCase):
 
         self.page_cases = [
             ("cart_view", {}, {}, "cart.html", "Giỏ hàng"),
-            ("cart_checkout", {}, {"discount_code": "SALE10"}, "checkout_cart.html", "Checkout - CART"),
+            ("cart_checkout", {}, {}, "checkout_cart.html", "Xác nhận đơn hàng (Giỏ hàng)"),
             (
                 "buy_now_checkout",
                 {},
-                {"product_id": self.product.id, "quantity": 1, "discount_code": "SAVE5"},
+                {"product_id": self.product.id, "quantity": 1},
                 "checkout_buy_now.html",
-                "Checkout - BUY_NOW",
+                "Xác nhận đơn hàng (Mua ngay)",
             ),
             ("orders_list", {}, {}, "orders_list.html", "Đơn hàng của tôi"),
             ("wallet_view", {}, {}, "wallet_view.html", "Ví tiền"),
-            ("order_detail", {"order_id": self.order.id}, {}, "order_detail.html", f"Chi tiết đơn hàng #{self.order.id}"),
+            ("order_detail", {"order_id": self.order.id}, {}, "order_detail.html", f"Hóa đơn điện tử #{self.order.id}"),
         ]
 
     def _get_page_response(self, route_name: str, kwargs: dict, params: dict):
@@ -517,9 +517,8 @@ class CheckoutPageRenderLoginRequiredSmokeTests(TestCase):
             self.assertTemplateUsed(response, template_name)
             self.assertContains(response, heading_text)
 
-        cart_checkout_page = self._get_page_response("cart_checkout", {}, {"discount_code": "VIP50"})
-        self.assertContains(cart_checkout_page, 'name="discount_code"')
-        self.assertContains(cart_checkout_page, f'action="{reverse("cart_checkout")}"')
+        cart_checkout_page = self._get_page_response("cart_checkout", {}, {})
+        self.assertContains(cart_checkout_page, f'action="{reverse("confirm_order")}"')
 
         cart_view_page = self._get_page_response("cart_view", {}, {})
         self.assertContains(cart_view_page, f'action="{reverse("cart_update")}"')
@@ -530,7 +529,6 @@ class CheckoutPageRenderLoginRequiredSmokeTests(TestCase):
         buy_now_page = self._get_page_response(
             "buy_now_checkout",
             {},
-            {"product_id": self.product.id, "quantity": 2, "discount_code": "VIP50"},
+            {"product_id": self.product.id, "quantity": 2},
         )
-        self.assertContains(buy_now_page, 'name="discount_code"')
-        self.assertContains(buy_now_page, f'action="{reverse("buy_now_checkout")}"')
+        self.assertContains(buy_now_page, f'action="{reverse("confirm_order")}"')
