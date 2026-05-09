@@ -2,7 +2,7 @@ from decimal import Decimal
 from django.test import TestCase
 from django.urls import reverse
 from django.contrib.auth import get_user_model
-from accounts.models import Customer
+from accounts.models import Customer, Wallet
 from products.models import Product, Cart, CartItem
 from orders.models import Order, OrderDetail
 
@@ -65,3 +65,31 @@ class OrdersSimpleTests(TestCase):
         order = Order.objects.create(customer=self.customer)
         response = self.client.get(reverse("order_detail", args=[order.id]))
         self.assertEqual(response.status_code, 200)
+
+    def test_checkout_with_sufficient_balance(self):
+        """Khách hàng có đủ tiền có thể đặt hàng và bị trừ tiền ví."""
+        Wallet.objects.create(customer=self.customer, balance=100000)
+        
+        response = self.client.post(reverse("confirm_order"), {
+            "source": "BUY_NOW",
+            "product_id": self.product.id,
+            "quantity": 1
+        })
+        
+        self.assertEqual(Order.objects.count(), 1)
+        self.customer.wallet.refresh_from_db()
+        self.assertEqual(self.customer.wallet.balance, 50000)
+
+    def test_checkout_with_insufficient_balance(self):
+        """Khách hàng không đủ tiền không thể đặt hàng."""
+        Wallet.objects.create(customer=self.customer, balance=10000)
+        
+        response = self.client.post(reverse("confirm_order"), {
+            "source": "BUY_NOW",
+            "product_id": self.product.id,
+            "quantity": 1
+        })
+        
+        self.assertEqual(Order.objects.count(), 0)
+        self.customer.wallet.refresh_from_db()
+        self.assertEqual(self.customer.wallet.balance, 10000)

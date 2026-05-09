@@ -247,6 +247,9 @@ def cart_checkout(request):
                 }
             )
 
+    wallet = getattr(customer, "wallet", None)
+    balance = wallet.balance if wallet else 0
+
     context = {
         "checkout_source": "CART",
         "cart_rows": cart_rows,
@@ -254,6 +257,7 @@ def cart_checkout(request):
         "item_rows": selected_rows,
         "has_items": bool(selected_rows),
         "subtotal_display": _format_currency_vnd(selected_subtotal),
+        "wallet_balance_display": _format_currency_vnd(balance),
         "discount_code_input": (request.GET.get("discount_code") or "").strip(),
     }
     return render(request, "checkout_cart.html", context)
@@ -307,12 +311,16 @@ def buy_now_checkout(request):
                     "line_subtotal_display": _format_currency_vnd(line_subtotal),
                 }
 
+    wallet = getattr(customer, "wallet", None)
+    balance = wallet.balance if wallet else 0
+
     context = {
         "checkout_source": "BUY_NOW",
         "preview_row": preview_row,
         "error_message": error_message,
         "product_id_input": product_id_raw,
         "quantity_input": quantity_raw,
+        "wallet_balance_display": _format_currency_vnd(balance),
         "discount_code_input": (request.GET.get("discount_code") or "").strip(),
     }
     return render(request, "checkout_buy_now.html", context)
@@ -445,10 +453,14 @@ def cart_view(request):
         if True:
             selected_subtotal += line_subtotal
 
+    wallet = getattr(customer, "wallet", None)
+    balance = wallet.balance if wallet else 0
+
     context = {
         "cart_rows": cart_rows,
         "has_cart_items": bool(cart_rows),
         "subtotal_display": _format_currency_vnd(selected_subtotal),
+        "wallet_balance_display": _format_currency_vnd(balance),
     }
     return render(request, "cart.html", context)
 
@@ -724,6 +736,12 @@ def confirm_order(request):
     if error_response:
         return redirect("home")
 
+    try:
+        wallet = customer.wallet
+    except Exception:
+        messages.error(request, "Tài khoản chưa có ví. Vui lòng liên hệ quản trị viên.")
+        return redirect("home")
+
     payload = _parse_request_data(request)
     source = payload.get("source") # "CART" or "BUY_NOW"
     
@@ -753,6 +771,15 @@ def confirm_order(request):
                 product.save(update_fields=["stock_quantity"])
                 
             order.recalculate_totals()
+            
+            if wallet.balance < order.total_amount:
+                transaction.set_rollback(True)
+                messages.error(request, "Số dư ví không đủ để mua hàng. Vui lòng nạp thêm tiền.")
+                return redirect("cart_checkout")
+                
+            wallet.balance = int(Decimal(wallet.balance) - order.total_amount)
+            wallet.save()
+
             # Xoa gio hang sau khi mua thanh cong
             cart.items.all().delete()
             
@@ -783,6 +810,14 @@ def confirm_order(request):
             product.stock_quantity -= quantity
             product.save(update_fields=["stock_quantity"])
             order.recalculate_totals()
+            
+            if wallet.balance < order.total_amount:
+                transaction.set_rollback(True)
+                messages.error(request, "Số dư ví không đủ để mua hàng. Vui lòng nạp thêm tiền.")
+                return redirect(f"{reverse('buy_now_checkout')}?product_id={product_id}&quantity={quantity}")
+
+            wallet.balance = int(Decimal(wallet.balance) - order.total_amount)
+            wallet.save()
             
             messages.success(request, "Dat hang thanh cong (Mua ngay)!")
             return redirect("order_detail", order_id=order.id)

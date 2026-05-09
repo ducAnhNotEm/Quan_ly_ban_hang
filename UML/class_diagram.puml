@@ -40,7 +40,6 @@ class Product {
   +id: int
   +productName: string
   +category: string
-  +slug: string
   +description: text?
   +price: decimal(12,2)
   +discountPercent: decimal(5,2)
