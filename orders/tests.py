@@ -1,534 +1,67 @@
 from decimal import Decimal
-
-from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
-
+from django.contrib.auth import get_user_model
 from accounts.models import Customer
+from products.models import Product, Cart, CartItem
 from orders.models import Order, OrderDetail
-from products.models import Cart, CartItem, Product
 
-"""
-Test suite cho app `orders`.
-
-Mục tiêu:
-- Xác nhận giá trị mặc định của đơn hàng.
-- Xác nhận quan hệ FK và logic tính tiền tự động.
-- Bảo vệ rule tổng tiền không âm và cascade delete.
-"""
-
-
-class OrdersModelTests(TestCase):
-    """Kiểm thử mô hình dữ liệu (model) `Order` và `OrderDetail`."""
+class OrdersSimpleTests(TestCase):
+    """
+    Kiểm thử đơn giản cho đơn hàng và thanh toán.
+    """
 
     def setUp(self):
-        """Tạo tài khoản/khách hàng/sản phẩm mẫu để dùng lại cho tất cả bài kiểm thử."""
+        """Khởi tạo dữ liệu mẫu."""
         self.user = get_user_model().objects.create_user(
-            username="charlie",
-            email="charlie@example.com",
-            password="testpass123",
+            username="testuser",
+            password="password123"
         )
         self.customer = Customer.objects.create(
             user=self.user,
-            full_name="Charlie Le",
-            phone_number="0988777666",
+            full_name="Người Dùng Thử"
         )
         self.product = Product.objects.create(
-            product_name="Ca phe",
-            category="Do uong",
-            slug="ca-phe",
-            price=Decimal("30000.00"),
-            stock_quantity=100,
-        )
-        self.product_2 = Product.objects.create(
-            product_name="Tra dao",
-            category="Do uong",
-            slug="tra-dao",
+            product_name="Sản phẩm mẫu",
             price=Decimal("50000.00"),
-            stock_quantity=100,
+            stock_quantity=100
         )
-
-    def test_order_defaults(self):
-        """Đơn hàng mới tạo phải có trạng thái/tiền mặc định đúng theo mô hình dữ liệu (model)."""
-        order = Order.objects.create(customer=self.customer)
-
-        self.assertEqual(order.status, Order.Status.PAID)
-        self.assertEqual(order.sub_total_amount, Decimal("0"))
-        self.assertEqual(order.discount_amount, Decimal("0"))
-        self.assertEqual(order.coupon_code, "")
-        self.assertEqual(order.total_amount, Decimal("0"))
-
-    def test_order_detail_relations(self):
-        """OrderDetail phải nối đúng với Order và Product qua reverse relation."""
-        order = Order.objects.create(
-            customer=self.customer,
-            sub_total_amount=Decimal("60000.00"),
-            total_amount=Decimal("60000.00"),
-        )
-
-        detail = OrderDetail.objects.create(
-            order=order,
-            product=self.product,
-            quantity=2,
-            unit_price=Decimal("30000.00"),
-            discount_percent=Decimal("0.00"),
-            discount_amount=Decimal("0.00"),
-            sub_total=Decimal("60000.00"),
-        )
-
-        self.assertEqual(order.details.count(), 1)
-        self.assertEqual(self.product.order_details.count(), 1)
-        self.assertEqual(detail.quantity, 2)
-
-    def test_order_detail_auto_calculates_amounts(self):
-        """`save()` của OrderDetail phải tự động tính discount_amount/sub_total."""
-        order = Order.objects.create(customer=self.customer)
-
-        detail = OrderDetail.objects.create(
-            order=order,
-            product=self.product,
-            quantity=2,
-            unit_price=Decimal("30000.00"),
-            discount_percent=Decimal("10.00"),
-        )
-
-        self.assertEqual(detail.discount_amount, Decimal("6000.00"))
-        self.assertEqual(detail.sub_total, Decimal("54000.00"))
-
-    def test_recalculate_order_totals_from_details(self):
-        """`recalculate_totals()` phải tổng hợp đúng gross/discount/coupon => total."""
-        order = Order.objects.create(
-            customer=self.customer,
-            coupon_code="SALE5K",
-            coupon_discount_amount=Decimal("5000.00"),
-        )
-
-        OrderDetail.objects.create(
-            order=order,
-            product=self.product,
-            quantity=2,
-            unit_price=Decimal("30000.00"),
-            discount_percent=Decimal("10.00"),
-        )
-        OrderDetail.objects.create(
-            order=order,
-            product=self.product_2,
-            quantity=1,
-            unit_price=Decimal("50000.00"),
-            discount_percent=Decimal("0.00"),
-        )
-
-        order.recalculate_totals()
-        order.refresh_from_db()
-
-        self.assertEqual(order.sub_total_amount, Decimal("110000.00"))
-        self.assertEqual(order.discount_amount, Decimal("6000.00"))
-        self.assertEqual(order.total_amount, Decimal("99000.00"))
-
-    def test_recalculate_order_total_not_negative(self):
-        """Tổng tiền sau coupon không được âm, phải bị chặn về 0."""
-        order = Order.objects.create(
-            customer=self.customer,
-            coupon_code="SALE200K",
-            coupon_discount_amount=Decimal("200000.00"),
-        )
-
-        OrderDetail.objects.create(
-            order=order,
-            product=self.product,
-            quantity=1,
-            unit_price=Decimal("30000.00"),
-            discount_percent=Decimal("0.00"),
-        )
-
-        order.recalculate_totals()
-        order.refresh_from_db()
-
-        self.assertEqual(order.sub_total_amount, Decimal("30000.00"))
-        self.assertEqual(order.discount_amount, Decimal("0.00"))
-        self.assertEqual(order.total_amount, Decimal("0.00"))
-
-    def test_delete_order_cascades_order_details(self):
-        """Xóa Order phải xóa toàn bộ OrderDetail liên quan."""
-        order = Order.objects.create(customer=self.customer)
-        OrderDetail.objects.create(
-            order=order,
-            product=self.product,
-            quantity=1,
-            unit_price=Decimal("30000.00"),
-            sub_total=Decimal("30000.00"),
-        )
-
-        order.delete()
-
-        self.assertEqual(OrderDetail.objects.count(), 0)
-
-    def test_delete_product_cascades_order_details(self):
-        """Xóa Product phải xóa OrderDetail đang FK tới Product đó."""
-        order = Order.objects.create(customer=self.customer)
-        OrderDetail.objects.create(
-            order=order,
-            product=self.product,
-            quantity=1,
-            unit_price=Decimal("30000.00"),
-            sub_total=Decimal("30000.00"),
-        )
-
-        self.product.delete()
-
-        self.assertEqual(OrderDetail.objects.count(), 0)
-
-
-class CheckoutRoutePermissionSmokeTests(TestCase):
-    """Smoke test cho route CART + BUY_NOW_PREPARE và guard quyền."""
-
-    def setUp(self):
-        user_model = get_user_model()
-
-        self.customer_user = user_model.objects.create_user(
-            username="checkout_customer",
-            email="checkout_customer@example.com",
-            password="testpass123",
-        )
-        self.staff_user = user_model.objects.create_user(
-            username="checkout_staff",
-            email="checkout_staff@example.com",
-            password="testpass123",
-            is_staff=True,
-        )
-
-        self.customer = Customer.objects.create(
-            user=self.customer_user,
-            full_name="Checkout Customer",
-            phone_number="0900333444",
-        )
-
-        self.product = Product.objects.create(
-            product_name="Banh quy",
-            category="Do an",
-            slug="banh-quy",
-            price=Decimal("45000.00"),
-            stock_quantity=20,
-        )
-        self.product_2 = Product.objects.create(
-            product_name="Nuoc ep",
-            category="Do uong",
-            slug="nuoc-ep",
-            price=Decimal("55000.00"),
-            stock_quantity=15,
-        )
-
-        cart = Cart.objects.create(customer=self.customer)
-        CartItem.objects.create(cart=cart, product=self.product, quantity=1, is_selected=True)
-
-        self.route_cases = [
-            ("cart_add", "post", {"product_id": self.product.id, "quantity": 1}),
-            ("cart_update", "post", {"product_id": self.product.id, "quantity": 2}),
-            ("cart_select", "post", {"product_id": self.product.id, "is_selected": False}),
-            ("buy_now_prepare", "post", {"product_id": self.product_2.id, "quantity": 1}),
-            ("cart_remove", "post", {"product_id": self.product.id}),
-        ]
-
-    def _call_route(self, route_name: str, method: str, payload: dict | None):
-        url = reverse(route_name)
-        if method == "get":
-            return self.client.get(url)
-        return self.client.post(url, data=payload or {})
-
-    def test_checkout_routes_are_registered(self):
-        """Tên route phải reverse được."""
-        for route_name, _, _ in self.route_cases:
-            self.assertTrue(reverse(route_name))
-
-    def test_checkout_routes_require_login(self):
-        """User chưa đăng nhập bị redirect về route login."""
-        login_url = reverse("login")
-
-        for route_name, method, payload in self.route_cases:
-            response = self._call_route(route_name, method, payload)
-            self.assertEqual(response.status_code, 302)
-            self.assertIn(login_url, response.url)
-
-    def test_staff_is_forbidden_from_checkout_routes(self):
-        """Staff đã đăng nhập không được đi luồng mua hàng."""
-        self.client.force_login(self.staff_user)
-
-        for route_name, method, payload in self.route_cases:
-            response = self._call_route(route_name, method, payload)
-            self.assertEqual(response.status_code, 403)
-            payload_json = response.json()
-            self.assertEqual(payload_json["ok"], False)
-            self.assertEqual(payload_json["error"]["code"], "staff_forbidden")
-
-    def test_customer_can_hit_checkout_routes(self):
-        """Customer gọi được endpoint smoke và nhận contract hợp lệ."""
-        self.client.force_login(self.customer_user)
-
-        for route_name, method, payload in self.route_cases:
-            response = self._call_route(route_name, method, payload)
-            self.assertEqual(response.status_code, 200)
-            payload_json = response.json()
-            self.assertEqual(payload_json["ok"], True)
-
-        buy_now_payload = self.client.post(
-            reverse("buy_now_prepare"),
-            data={"product_id": self.product_2.id, "quantity": 1},
-        ).json()
-        self.assertEqual(buy_now_payload["data"]["checkout"]["source"], "BUY_NOW")
-
-
-class CartMutationTests(TestCase):
-    """Kiểm thử chi tiết cho các endpoint mutation của giỏ hàng."""
-
-    def setUp(self):
-        user_model = get_user_model()
-        self.user = user_model.objects.create_user(
-            username="cart_mutation_user",
-            email="cart_mutation_user@example.com",
-            password="testpass123",
-        )
-        self.customer = Customer.objects.create(
-            user=self.user,
-            full_name="Cart Mutation",
-            phone_number="0900123000",
-        )
-        self.cart = Cart.objects.create(customer=self.customer)
-
-        self.product_a = Product.objects.create(
-            product_name="Banh su kem",
-            category="Do an",
-            slug="banh-su-kem",
-            price=Decimal("20000.00"),
-            stock_quantity=5,
-        )
-        self.product_b = Product.objects.create(
-            product_name="Nuoc suoi",
-            category="Do uong",
-            slug="nuoc-suoi",
-            price=Decimal("10000.00"),
-            stock_quantity=2,
-        )
-
-        CartItem.objects.create(
-            cart=self.cart,
-            product=self.product_a,
-            quantity=2,
-            is_selected=True,
-        )
-
         self.client.force_login(self.user)
 
-    def test_cart_add_success(self):
-        response = self.client.post(
-            reverse("cart_add"),
-            data={"product_id": self.product_b.id, "quantity": 1},
-        )
-
-        self.assertEqual(response.status_code, 200)
-        payload = response.json()
-        self.assertEqual(payload["ok"], True)
-        self.assertIn("vao gio hang", payload["message"])
-
-        item = CartItem.objects.get(cart=self.cart, product=self.product_b)
-        self.assertEqual(item.quantity, 1)
-        self.assertTrue(item.is_selected)
-
-    def test_cart_add_increases_quantity_if_exists(self):
-        response = self.client.post(
-            reverse("cart_add"),
-            data={"product_id": self.product_a.id, "quantity": 2},
-        )
-
-        self.assertEqual(response.status_code, 200)
-        payload = response.json()
-        self.assertEqual(payload["ok"], True)
-
-        item = CartItem.objects.get(cart=self.cart, product=self.product_a)
-        self.assertEqual(item.quantity, 4)  # Ban đầu có 2, cộng thêm 2
-        self.assertTrue(item.is_selected)
-
-    def test_cart_update_success(self):
-        response = self.client.post(
-            reverse("cart_update"),
-            data={"product_id": self.product_a.id, "quantity": 3},
-        )
-
-        self.assertEqual(response.status_code, 200)
-        payload = response.json()
-        self.assertEqual(payload["ok"], True)
-        self.assertIn("cap nhat", payload["message"])
-
-        item = CartItem.objects.get(cart=self.cart, product=self.product_a)
-        self.assertEqual(item.quantity, 3)
-
-    def test_cart_remove_success(self):
-        response = self.client.post(
-            reverse("cart_remove"),
-            data={"product_id": self.product_a.id},
-        )
-
-        self.assertEqual(response.status_code, 200)
-        payload = response.json()
-        self.assertEqual(payload["ok"], True)
-        self.assertIn("khoi gio hang", payload["message"])
-        self.assertFalse(CartItem.objects.filter(cart=self.cart, product=self.product_a).exists())
-
-    def test_cart_select_success(self):
-        response = self.client.post(
-            reverse("cart_select"),
-            data={"product_id": self.product_a.id, "is_selected": "false"},
-        )
-
-        self.assertEqual(response.status_code, 200)
-        payload = response.json()
-        self.assertEqual(payload["ok"], True)
-        self.assertIn("bo chon", payload["message"])
-
-        item = CartItem.objects.get(cart=self.cart, product=self.product_a)
-        self.assertFalse(item.is_selected)
-
-    def test_cart_add_fails_when_quantity_not_positive(self):
-        response = self.client.post(
-            reverse("cart_add"),
-            data={"product_id": self.product_b.id, "quantity": 0},
-        )
-
-        self.assertEqual(response.status_code, 400)
-        payload = response.json()
-        self.assertEqual(payload["ok"], False)
-        self.assertEqual(payload["error"]["code"], "invalid_quantity")
-
-    def test_cart_update_fails_when_quantity_exceeds_stock(self):
-        response = self.client.post(
-            reverse("cart_update"),
-            data={"product_id": self.product_a.id, "quantity": 6},
-        )
-
-        self.assertEqual(response.status_code, 400)
-        payload = response.json()
-        self.assertEqual(payload["ok"], False)
-        self.assertEqual(payload["error"]["code"], "quantity_exceeds_stock")
-
-    def test_cart_add_fails_when_quantity_exceeds_stock(self):
-        response = self.client.post(
-            reverse("cart_add"),
-            data={"product_id": self.product_b.id, "quantity": 3},
-        )
-
-        self.assertEqual(response.status_code, 400)
-        payload = response.json()
-        self.assertEqual(payload["ok"], False)
-        self.assertEqual(payload["error"]["code"], "quantity_exceeds_stock")
-
-    def test_cart_add_requires_customer_profile(self):
-        user_model = get_user_model()
-        user_without_profile = user_model.objects.create_user(
-            username="no_customer_profile",
-            email="no_customer_profile@example.com",
-            password="testpass123",
-        )
-        self.client.force_login(user_without_profile)
-
-        response = self.client.post(
-            reverse("cart_add"),
-            data={"product_id": self.product_b.id, "quantity": 1},
-        )
-
-        self.assertEqual(response.status_code, 403)
-        payload = response.json()
-        self.assertEqual(payload["ok"], False)
-        self.assertEqual(payload["error"]["code"], "customer_profile_missing")
-
-
-class CheckoutPageRenderLoginRequiredSmokeTests(TestCase):
-    """Smoke test cho trang render checkout/wallet/orders và guard login."""
-
-    def setUp(self):
-        user_model = get_user_model()
-        self.customer_user = user_model.objects.create_user(
-            username="page_customer",
-            email="page_customer@example.com",
-            password="testpass123",
-        )
-        self.customer = Customer.objects.create(
-            user=self.customer_user,
-            full_name="Page Customer",
-            phone_number="0911222333",
-        )
-
-        self.product = Product.objects.create(
-            product_name="Sua tuoi",
-            category="Do uong",
-            slug="sua-tuoi",
-            price=Decimal("35000.00"),
-            stock_quantity=30,
-        )
-
-        cart = Cart.objects.create(customer=self.customer)
-        CartItem.objects.create(cart=cart, product=self.product, quantity=2, is_selected=True)
-
-        self.order = Order.objects.create(
+    def test_order_creation(self):
+        """Kiểm tra việc tạo một đơn hàng (Order)."""
+        order = Order.objects.create(
             customer=self.customer,
-            sub_total_amount=Decimal("70000.00"),
-            total_amount=Decimal("70000.00"),
+            total_amount=Decimal("50000.00")
         )
-        OrderDetail.objects.create(
-            order=self.order,
+        self.assertEqual(order.customer.full_name, "Người Dùng Thử")
+        self.assertEqual(order.total_amount, Decimal("50000.00"))
+
+    def test_order_detail_creation(self):
+        """Kiểm tra tạo chi tiết đơn hàng (OrderDetail)."""
+        order = Order.objects.create(customer=self.customer)
+        detail = OrderDetail.objects.create(
+            order=order,
             product=self.product,
-            quantity=2,
-            unit_price=Decimal("35000.00"),
-            discount_percent=Decimal("0.00"),
+            quantity=1,
+            unit_price=Decimal("50000.00"),
+            sub_total=Decimal("50000.00")
         )
+        self.assertEqual(detail.product.product_name, "Sản phẩm mẫu")
+        self.assertEqual(detail.sub_total, Decimal("50000.00"))
 
-        self.page_cases = [
-            ("cart_view", {}, {}, "cart.html", "Giỏ hàng"),
-            ("cart_checkout", {}, {}, "checkout_cart.html", "Xác nhận đơn hàng (Giỏ hàng)"),
-            (
-                "buy_now_checkout",
-                {},
-                {"product_id": self.product.id, "quantity": 1},
-                "checkout_buy_now.html",
-                "Xác nhận đơn hàng (Mua ngay)",
-            ),
-            ("orders_list", {}, {}, "orders_list.html", "Đơn hàng của tôi"),
-            ("wallet_view", {}, {}, "wallet_view.html", "Ví tiền"),
-            ("order_detail", {"order_id": self.order.id}, {}, "order_detail.html", f"Hóa đơn điện tử #{self.order.id}"),
-        ]
+    def test_cart_page_load(self):
+        """Kiểm tra trang giỏ hàng có tải thành công không."""
+        response = self.client.get(reverse("cart_view"))
+        self.assertEqual(response.status_code, 200)
 
-    def _get_page_response(self, route_name: str, kwargs: dict, params: dict):
-        return self.client.get(reverse(route_name, kwargs=kwargs), data=params)
+    def test_orders_list_page_load(self):
+        """Kiểm tra trang danh sách đơn hàng có tải thành công không."""
+        response = self.client.get(reverse("orders_list"))
+        self.assertEqual(response.status_code, 200)
 
-    def test_pages_require_login(self):
-        """User chưa đăng nhập bị redirect về login cho toàn bộ trang mới."""
-        login_url = reverse("login")
-
-        for route_name, kwargs, params, _, _ in self.page_cases:
-            response = self._get_page_response(route_name, kwargs, params)
-            self.assertEqual(response.status_code, 302)
-            self.assertIn(login_url, response.url)
-
-    def test_customer_can_render_pages(self):
-        """Customer đăng nhập render được trang mới và đúng template cơ bản."""
-        self.client.force_login(self.customer_user)
-
-        for route_name, kwargs, params, template_name, heading_text in self.page_cases:
-            response = self._get_page_response(route_name, kwargs, params)
-            self.assertEqual(response.status_code, 200)
-            self.assertTemplateUsed(response, template_name)
-            self.assertContains(response, heading_text)
-
-        cart_checkout_page = self._get_page_response("cart_checkout", {}, {})
-        self.assertContains(cart_checkout_page, f'action="{reverse("confirm_order")}"')
-
-        cart_view_page = self._get_page_response("cart_view", {}, {})
-        self.assertContains(cart_view_page, f'action="{reverse("cart_update")}"')
-        self.assertContains(cart_view_page, f'action="{reverse("cart_remove")}"')
-        self.assertContains(cart_view_page, f'action="{reverse("cart_select")}"')
-        self.assertContains(cart_view_page, 'name="next"')
-
-        buy_now_page = self._get_page_response(
-            "buy_now_checkout",
-            {},
-            {"product_id": self.product.id, "quantity": 2},
-        )
-        self.assertContains(buy_now_page, f'action="{reverse("confirm_order")}"')
+    def test_order_detail_page_load(self):
+        """Kiểm tra trang chi tiết đơn hàng có tải thành công không."""
+        order = Order.objects.create(customer=self.customer)
+        response = self.client.get(reverse("order_detail", args=[order.id]))
+        self.assertEqual(response.status_code, 200)

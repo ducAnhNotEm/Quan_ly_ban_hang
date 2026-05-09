@@ -145,14 +145,13 @@ def _cart_snapshot(cart: Cart) -> dict:
         }
         cart_items.append(item_payload)
 
-        if item.is_selected:
-            selected_items_for_checkout.append(
-                {
-                    "product_id": item.product_id,
-                    "quantity": item.quantity,
-                    "line_subtotal": line_subtotal,
-                }
-            )
+        selected_items_for_checkout.append(
+            {
+                "product_id": item.product_id,
+                "quantity": item.quantity,
+                "line_subtotal": line_subtotal,
+            }
+        )
 
     return {
         "cart": {
@@ -177,6 +176,9 @@ def _ensure_post(request) -> JsonResponse | None:
 def _get_customer_or_error(request):
     customer = getattr(request.user, "customer_profile", None)
     if customer is None:
+        if "application/json" not in (request.content_type or ""):
+            messages.error(request, "Tai khoan chua co ho so khach hang. Vui long dang ky lai.")
+            return None, redirect("home")
         return None, _json_error(
             "Tai khoan chua co ho so khach hang.",
             status=403,
@@ -190,6 +192,10 @@ def purchase_flow_guard(view_func):
     @login_required(login_url="login")
     def _wrapped(request, *args, **kwargs):
         if request.user.is_staff:
+            # For HTML form submissions, redirect with a message instead of JSON
+            if "application/json" not in (request.content_type or ""):
+                messages.error(request, "Tai khoan staff khong duoc thuc hien mua hang.")
+                return redirect("home")
             return _json_error(
                 "Tai khoan staff khong duoc di luong mua hang.",
                 status=403,
@@ -203,11 +209,7 @@ def purchase_flow_guard(view_func):
 @purchase_flow_guard
 def cart_checkout(request):
     if request.method != "GET":
-        return _json_error(
-            "Method khong duoc ho tro cho endpoint nay.",
-            status=405,
-            code="method_not_allowed",
-        )
+        return redirect("cart_checkout")
 
     customer, error_response = _get_customer_or_error(request)
     if error_response:
@@ -233,7 +235,7 @@ def cart_checkout(request):
         }
         cart_rows.append(row)
 
-        if item.is_selected:
+        if True:
             selected_subtotal += line_subtotal
             selected_rows.append(
                 {
@@ -266,11 +268,7 @@ def _stock_exceeds_message(requested_quantity: int, stock_quantity: int) -> str:
 @purchase_flow_guard
 def buy_now_checkout(request):
     if request.method != "GET":
-        return _json_error(
-            "Method khong duoc ho tro cho endpoint nay.",
-            status=405,
-            code="method_not_allowed",
-        )
+        return redirect("buy_now_checkout")
 
     customer, error_response = _get_customer_or_error(request)
     if error_response:
@@ -323,11 +321,7 @@ def buy_now_checkout(request):
 @purchase_flow_guard
 def orders_list(request):
     if request.method != "GET":
-        return _json_error(
-            "Method khong duoc ho tro cho endpoint nay.",
-            status=405,
-            code="method_not_allowed",
-        )
+        return redirect("orders_list")
 
     customer, error_response = _get_customer_or_error(request)
     if error_response:
@@ -354,11 +348,7 @@ def orders_list(request):
 @purchase_flow_guard
 def order_detail(request, order_id: int):
     if request.method != "GET":
-        return _json_error(
-            "Method khong duoc ho tro cho endpoint nay.",
-            status=405,
-            code="method_not_allowed",
-        )
+        return redirect("orders_list")
 
     customer, error_response = _get_customer_or_error(request)
     if error_response:
@@ -394,11 +384,7 @@ def order_detail(request, order_id: int):
 @purchase_flow_guard
 def wallet_view(request):
     if request.method != "GET":
-        return _json_error(
-            "Method khong duoc ho tro cho endpoint nay.",
-            status=405,
-            code="method_not_allowed",
-        )
+        return redirect("wallet_view")
 
     customer, error_response = _get_customer_or_error(request)
     if error_response:
@@ -430,11 +416,7 @@ def wallet_view(request):
 @purchase_flow_guard
 def cart_view(request):
     if request.method != "GET":
-        return _json_error(
-            "Method khong duoc ho tro cho endpoint nay.",
-            status=405,
-            code="method_not_allowed",
-        )
+        return redirect("cart_view")
 
     customer, error_response = _get_customer_or_error(request)
     if error_response:
@@ -451,7 +433,7 @@ def cart_view(request):
         row = {
             "product_id": item.product_id,
             "product_name": item.product.product_name,
-            "image_url": item.product.image.url if item.product.image else None,
+            "image_url": item.product.image_url or (item.product.image.url if item.product.image else None),
             "quantity": item.quantity,
             "stock_quantity": item.product.stock_quantity,
             "is_selected": item.is_selected,
@@ -460,7 +442,7 @@ def cart_view(request):
         }
         cart_rows.append(row)
 
-        if item.is_selected:
+        if True:
             selected_subtotal += line_subtotal
 
     context = {
@@ -676,62 +658,6 @@ def cart_remove(request):
     )
 
 
-@purchase_flow_guard
-def cart_select(request):
-    method_error = _ensure_post(request)
-    if method_error:
-        return method_error
-
-    customer, error_response = _get_customer_or_error(request)
-    if error_response:
-        return error_response
-
-    try:
-        payload = _parse_request_data(request)
-    except ValueError as exc:
-        return _json_error(str(exc), code="invalid_json")
-
-    product_id = _parse_positive_int(payload, "product_id")
-    is_selected = _parse_bool(payload, "is_selected")
-
-    if product_id is None:
-        return _respond_error(
-            request,
-            payload,
-            "product_id phai la so nguyen duong.",
-            code="invalid_product_id",
-        )
-    if is_selected is None:
-        return _respond_error(
-            request,
-            payload,
-            "is_selected phai la bool.",
-            code="invalid_is_selected",
-        )
-
-    cart, _ = Cart.objects.get_or_create(customer=customer)
-    cart_item = CartItem.objects.select_related("product").filter(
-        cart=cart,
-        product_id=product_id,
-    ).first()
-    if cart_item is None:
-        return _respond_error(
-            request,
-            payload,
-            "San pham khong ton tai trong gio hang.",
-            status=404,
-            code="cart_item_not_found",
-        )
-
-    cart_item.is_selected = is_selected
-    cart_item.save(update_fields=["is_selected"])
-
-    if is_selected:
-        success_message = f'Da chon "{cart_item.product.product_name}" cho checkout.'
-    else:
-        success_message = f'Da bo chon "{cart_item.product.product_name}" khoi checkout.'
-
-    return _respond_success(request, payload, success_message, _cart_snapshot(cart))
 
 
 @purchase_flow_guard
@@ -804,9 +730,9 @@ def confirm_order(request):
     with transaction.atomic():
         if source == "CART":
             cart, _ = Cart.objects.get_or_create(customer=customer)
-            selected_items = list(cart.items.select_related("product").filter(is_selected=True))
+            selected_items = list(cart.items.select_related("product").all())
             if not selected_items:
-                messages.error(request, "Khong co san pham nao duoc chon trong gio hang.")
+                messages.error(request, "Khong co san pham nao trong gio hang.")
                 return redirect("cart_view")
                 
             order = Order.objects.create(customer=customer)
@@ -828,7 +754,7 @@ def confirm_order(request):
                 
             order.recalculate_totals()
             # Xoa gio hang sau khi mua thanh cong
-            cart.items.filter(is_selected=True).delete()
+            cart.items.all().delete()
             
             messages.success(request, "Dat hang thanh cong tu gio hang!")
             return redirect("order_detail", order_id=order.id)

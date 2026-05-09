@@ -1,7 +1,6 @@
 import random
 from decimal import Decimal
 from django.core.management.base import BaseCommand
-from django.utils.text import slugify
 from products.models import Product
 
 class Command(BaseCommand):
@@ -24,22 +23,9 @@ class Command(BaseCommand):
         ]
 
         for item in dummy_products:
-            base_slug = slugify(item['name'])
-            slug = base_slug
-            
-            existing_product = Product.objects.filter(product_name=item['name']).first()
-            if existing_product:
-                slug = existing_product.slug
-            else:
-                counter = 1
-                while Product.objects.filter(slug=slug).exists():
-                    slug = f"{base_slug}-{counter}"
-                    counter += 1
-
             Product.objects.update_or_create(
                 product_name=item['name'],
                 defaults={
-                    'slug': slug,
                     'description': item['desc'],
                     'price': Decimal(item['price']),
                     'stock_quantity': item['stock'],

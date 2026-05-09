@@ -25,7 +25,6 @@ class Product(models.Model):
     # Thuộc tính mô tả và định danh sản phẩm.
     product_name = models.CharField(max_length=255)
     category = models.CharField(max_length=100)
-    slug = models.SlugField(max_length=255, unique=True)
     description = models.TextField(blank=True, null=True)
     # Thuộc tính giá/bán hàng.
     price = models.DecimalField(max_digits=12, decimal_places=2)
@@ -36,8 +35,7 @@ class Product(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self) -> str:
-        """Chuỗi đại diện gọn cho sản phẩm trong trang quản trị/nhật ký."""
-        return f"{self.product_name} ({self.slug})"
+        return self.product_name
 
     @property
     def discounted_price(self) -> Decimal:
