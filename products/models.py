@@ -32,6 +32,7 @@ class Product(models.Model):
     discount_percent = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     stock_quantity = models.IntegerField(default=0)
     image = models.ImageField(upload_to="products/images/", blank=True, null=True)
+    image_url = models.URLField(max_length=500, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self) -> str:

@@ -1,4 +1,4 @@
-﻿from django.contrib import messages
+from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth import get_user_model
 from django.db import transaction
@@ -6,6 +6,9 @@ from django.db.models import F
 from django.shortcuts import redirect, render
 from django.urls import include, path
 from django.utils import timezone
+from django.core.paginator import Paginator
+from django.conf import settings
+from django.conf.urls.static import static
 
 from accounts.forms import RegisterForm
 from accounts.models import Customer, TopUpRequest, Wallet
@@ -256,14 +259,41 @@ def home(request):
                     for row in history_rows
                 ]
 
+    products = Product.objects.all().order_by('-created_at')
+
+    search_query = request.GET.get("q", "").strip()
+    if search_query:
+        products = products.filter(product_name__icontains=search_query)
+
+    if selected_category:
+        products = products.filter(category=selected_category)
+
+    if selected_price == "under_500k":
+        products = products.filter(price__lt=500000)
+    elif selected_price == "500k_1m":
+        products = products.filter(price__gte=500000, price__lte=1000000)
+    elif selected_price == "1m_3m":
+        products = products.filter(price__gt=1000000, price__lte=3000000)
+    elif selected_price == "above_3m":
+        products = products.filter(price__gt=3000000)
+
+    if selected_stock == "in_stock":
+        products = products.filter(stock_quantity__gt=0)
+    elif selected_stock == "out_stock":
+        products = products.filter(stock_quantity=0)
+
+    paginator = Paginator(products, 12)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
     # Dữ liệu tổng cho template.
     context = {
         "category_filters": category_filters,
         "filter_sections": filter_sections,
         # Cờ này dùng để hiển thị trạng thái "đang có bộ lọc".
-        "has_active_filters": bool(selected_category or selected_price or selected_stock),
-        # Khung trống 12 ô sản phẩm cho giao diện.
-        "product_slots": list(range(12)),
+        "has_active_filters": bool(selected_category or selected_price or selected_stock or search_query),
+        "page_obj": page_obj,
+        "search_query": search_query,
         "topup_section_title": topup_section_title,
         "topup_rows": topup_rows,
         "has_topup_rows": bool(topup_rows),
@@ -605,5 +635,8 @@ urlpatterns = [
     # Đăng ký tài khoản mới.
     path("register/", register_view, name="register"),
 ]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 

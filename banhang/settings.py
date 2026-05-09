@@ -1,4 +1,4 @@
-﻿"""
+"""
 Cấu hình Django cho dự án `banhang`.
 
 File này được tạo từ lệnh `django-admin startproject` (Django 6.0.3).
@@ -144,4 +144,8 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
+
+# Cấu hình media (hình ảnh sản phẩm tải lên).
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 
