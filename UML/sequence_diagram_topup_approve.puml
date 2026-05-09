@@ -1,67 +1,47 @@
 @startuml
-title Sales Management - Sequence Diagram (TopUp Create + Approve/Reject)
+title Biểu đồ tuần tự - Gửi yêu cầu nạp tiền và duyệt nạp tiền
 
-actor Customer
-actor Admin
-participant "TopUpRequestCreateView" as CreateView
-participant "TopUpRequestListView" as ListView
-participant "TopUpRequestApproveView" as ApproveView
-participant "TopUpRequestRejectView" as RejectView
-database "Customer" as CustomerDB
-database "TopUpRequest" as TopUpDB
-database "Wallet" as WalletDB
+actor "Khách hàng" as Customer
+actor "Admin/Staff" as Admin
+participant "Hệ thống" as System
+database "Yêu cầu nạp tiền" as TopUpDB
+database "Ví tiền" as WalletDB
 
-== Customer creates request ==
-Customer -> CreateView: GET /wallet/topup/create/
-alt Not authenticated
-  CreateView --> Customer: Redirect /login/
-else Staff account
-  CreateView --> Customer: Redirect / (home)
-else Customer account
-  CreateView --> Customer: Render form
+== Khách hàng gửi yêu cầu nạp tiền ==
+
+Customer -> System: Nhập số tiền và lý do nạp tiền
+System -> System: Kiểm tra số tiền hợp lệ
+System -> System: Kiểm tra lý do không được bỏ trống
+
+alt Thông tin không hợp lệ
+    System --> Customer: Thông báo lỗi
+else Thông tin hợp lệ
+    System -> TopUpDB: Tạo yêu cầu nạp tiền mới
+    note right
+      status = PENDING
+    end note
+    System --> Customer: Thông báo gửi yêu cầu thành công
+    System --> Customer: Hiển thị lịch sử yêu cầu nạp tiền
 end
 
-Customer -> CreateView: POST amount, note
-CreateView -> CreateView: Validate amount format and value > 0
-alt Invalid amount
-  CreateView --> Customer: Render form + error
-else Valid amount
-  CreateView -> CustomerDB: load request.user.customer_profile
-  alt customer_profile missing
-    CreateView --> Customer: Redirect / + error
-  else Found
-    CreateView -> TopUpDB: create(status=PENDING, amount, note)
-    TopUpDB --> CreateView: request created
-    CreateView --> Customer: Redirect /wallet/ + success
-  end
+
+== Admin/Staff duyệt yêu cầu nạp tiền ==
+
+Admin -> System: Mở chức năng duyệt yêu cầu nạp tiền
+System -> TopUpDB: Lấy danh sách yêu cầu đang chờ duyệt
+System --> Admin: Hiển thị danh sách yêu cầu đang chờ
+
+Admin -> System: Chọn một yêu cầu và thao tác xử lý
+
+alt Chọn duyệt yêu cầu
+    System -> TopUpDB: Cập nhật trạng thái thành APPROVED
+    System -> WalletDB: Cộng số tiền vào ví khách hàng
+    System --> Admin: Thông báo duyệt thành công
+else Chọn từ chối yêu cầu
+    System -> TopUpDB: Cập nhật trạng thái thành REJECTED
+    System --> Admin: Thông báo từ chối thành công
 end
 
-== Admin reviews requests ==
-Admin -> ListView: GET /wallet/topup/requests/
-ListView -> TopUpDB: all().order_by('-id')
-TopUpDB --> ListView: request list
-ListView --> Admin: Render list
-
-alt Approve flow
-  Admin -> ApproveView: POST /wallet/topup/requests/{id}/approve/
-  ApproveView -> TopUpDB: get_object_or_404(id)
-  alt status != PENDING
-    ApproveView --> Admin: Redirect list + error
-  else status == PENDING
-    ApproveView -> WalletDB: get wallet of request.customer
-    ApproveView -> WalletDB: balance += amount; save()
-    ApproveView -> TopUpDB: status=APPROVED; save()
-    ApproveView --> Admin: Redirect list + success
-  end
-else Reject flow
-  Admin -> RejectView: POST /wallet/topup/requests/{id}/reject/
-  RejectView -> TopUpDB: get_object_or_404(id)
-  alt status != PENDING
-    RejectView --> Admin: Redirect list + error
-  else status == PENDING
-    RejectView -> TopUpDB: status=REJECTED; save()
-    RejectView --> Admin: Redirect list + success
-  end
-end
-
+System -> TopUpDB: Cập nhật lại danh sách yêu cầu đang chờ
+System --> Admin: Hiển thị danh sách sau khi xử lý
 @enduml

@@ -4,12 +4,12 @@ from functools import wraps
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
 
-from django.db import transaction
 from accounts.models import TopUpRequest
 from orders.models import Order, OrderDetail
 from products.models import Cart, CartItem, Product
@@ -62,17 +62,20 @@ def _resolve_next_url(request, payload: dict) -> str | None:
     if "application/json" in (request.content_type or ""):
         return None
 
+    # Thu thập URL điều hướng: Ưu tiên tham số 'next', sau đó là Referer (trang trước đó)
     next_url = str(payload.get("next") or "").strip()
     if not next_url:
-        return None
+        next_url = request.META.get("HTTP_REFERER")
 
-    if url_has_allowed_host_and_scheme(
+    if next_url and url_has_allowed_host_and_scheme(
         url=next_url,
         allowed_hosts={request.get_host()},
         require_https=request.is_secure(),
     ):
         return next_url
-    return reverse("cart_checkout")
+        
+    # Mặc định quay về trang chủ nếu không có thông tin điều hướng hợp lệ
+    return reverse("home")
 
 
 def _respond_error(request, payload: dict, message: str, *, status: int = 400, code: str | None = None):
@@ -258,7 +261,6 @@ def cart_checkout(request):
         "has_items": bool(selected_rows),
         "subtotal_display": _format_currency_vnd(selected_subtotal),
         "wallet_balance_display": _format_currency_vnd(balance),
-        "discount_code_input": (request.GET.get("discount_code") or "").strip(),
     }
     return render(request, "checkout_cart.html", context)
 
@@ -321,7 +323,6 @@ def buy_now_checkout(request):
         "product_id_input": product_id_raw,
         "quantity_input": quantity_raw,
         "wallet_balance_display": _format_currency_vnd(balance),
-        "discount_code_input": (request.GET.get("discount_code") or "").strip(),
     }
     return render(request, "checkout_buy_now.html", context)
 
@@ -382,9 +383,8 @@ def order_detail(request, order_id: int):
         "order": order,
         "detail_rows": detail_rows,
         "sub_total_display": _format_currency_vnd(order.sub_total_amount),
-        "discount_display": _format_currency_vnd(order.discount_amount + order.coupon_discount_amount),
+        "discount_display": _format_currency_vnd(order.discount_amount),
         "total_display": _format_currency_vnd(order.total_amount),
-        "coupon_code_display": order.coupon_code or "-",
     }
     return render(request, "order_detail.html", context)
 
@@ -745,83 +745,87 @@ def confirm_order(request):
     payload = _parse_request_data(request)
     source = payload.get("source") # "CART" or "BUY_NOW"
     
-    with transaction.atomic():
-        if source == "CART":
-            cart, _ = Cart.objects.get_or_create(customer=customer)
-            selected_items = list(cart.items.select_related("product").all())
-            if not selected_items:
-                messages.error(request, "Khong co san pham nao trong gio hang.")
-                return redirect("cart_view")
-                
-            order = Order.objects.create(customer=customer)
-            for item in selected_items:
-                product = item.product
-                if item.quantity > product.stock_quantity:
-                    messages.error(request, _stock_exceeds_message(item.quantity, product.stock_quantity))
-                    return redirect("cart_checkout")
-                
-                OrderDetail.objects.create(
-                    order=order,
-                    product=product,
-                    quantity=item.quantity,
-                    unit_price=product.price,
-                    discount_percent=product.discount_percent
-                )
-                product.stock_quantity -= item.quantity
-                product.save(update_fields=["stock_quantity"])
-                
-            order.recalculate_totals()
+    if source == "CART":
+        cart, _ = Cart.objects.get_or_create(customer=customer)
+        selected_items = list(cart.items.select_related("product").all())
+        if not selected_items:
+            messages.error(request, "Khong co san pham nao trong gio hang.")
+            return redirect("cart_view")
             
-            if wallet.balance < order.total_amount:
-                transaction.set_rollback(True)
-                messages.error(request, "Số dư ví không đủ để mua hàng. Vui lòng nạp thêm tiền.")
+        # Tính trước tổng tiền giỏ hàng
+        expected_total = sum(item.sub_total for item in selected_items)
+        if wallet.balance < expected_total:
+            messages.error(request, "Số dư ví không đủ để mua hàng. Vui lòng nạp thêm tiền.")
+            return redirect("cart_checkout")
+            
+        # Kiểm tra toàn bộ tồn kho trước khi tạo đơn hàng (dễ giải thích hơn là tạo rồi xóa)
+        for item in selected_items:
+            if item.quantity > item.product.stock_quantity:
+                messages.error(request, _stock_exceeds_message(item.quantity, item.product.stock_quantity))
                 return redirect("cart_checkout")
                 
-            wallet.balance = int(Decimal(wallet.balance) - order.total_amount)
-            wallet.save()
-
-            # Xoa gio hang sau khi mua thanh cong
-            cart.items.all().delete()
+        order = Order.objects.create(customer=customer)
+        for item in selected_items:
+            product = item.product
             
-            messages.success(request, "Dat hang thanh cong tu gio hang!")
-            return redirect("order_detail", order_id=order.id)
-            
-        elif source == "BUY_NOW":
-            product_id = _parse_positive_int(payload, "product_id")
-            quantity = _parse_positive_int(payload, "quantity")
-            
-            if not product_id or not quantity:
-                messages.error(request, "Thong tin san pham khong hop le.")
-                return redirect("home")
-                
-            product = get_object_or_404(Product, pk=product_id)
-            if quantity > product.stock_quantity:
-                messages.error(request, _stock_exceeds_message(quantity, product.stock_quantity))
-                return redirect(f"{reverse('buy_now_checkout')}?product_id={product_id}&quantity={quantity}")
-                
-            order = Order.objects.create(customer=customer)
             OrderDetail.objects.create(
                 order=order,
                 product=product,
-                quantity=quantity,
+                quantity=item.quantity,
                 unit_price=product.price,
                 discount_percent=product.discount_percent
             )
-            product.stock_quantity -= quantity
+            product.stock_quantity -= item.quantity
             product.save(update_fields=["stock_quantity"])
-            order.recalculate_totals()
             
-            if wallet.balance < order.total_amount:
-                transaction.set_rollback(True)
-                messages.error(request, "Số dư ví không đủ để mua hàng. Vui lòng nạp thêm tiền.")
-                return redirect(f"{reverse('buy_now_checkout')}?product_id={product_id}&quantity={quantity}")
+        order.recalculate_totals()
+        
+        wallet.balance = int(Decimal(wallet.balance) - order.total_amount)
+        wallet.save()
 
-            wallet.balance = int(Decimal(wallet.balance) - order.total_amount)
-            wallet.save()
-            
-            messages.success(request, "Dat hang thanh cong (Mua ngay)!")
-            return redirect("order_detail", order_id=order.id)
-            
-        else:
-            messages.error(request, "Nguon thanh toan khong hop le.")
+        # Xoa gio hang sau khi mua thanh cong
+        cart.items.all().delete()
+        
+        messages.success(request, "Dat hang thanh cong tu gio hang!")
+        return redirect("order_detail", order_id=order.id)
+        
+    elif source == "BUY_NOW":
+        product_id = _parse_positive_int(payload, "product_id")
+        quantity = _parse_positive_int(payload, "quantity")
+        
+        if not product_id or not quantity:
+            messages.error(request, "Thong tin san pham khong hop le.")
             return redirect("home")
+            
+        product = get_object_or_404(Product, pk=product_id)
+        if quantity > product.stock_quantity:
+            messages.error(request, _stock_exceeds_message(quantity, product.stock_quantity))
+            return redirect(f"{reverse('buy_now_checkout')}?product_id={product_id}&quantity={quantity}")
+            
+        # Tính trước tổng tiền
+        expected_total = product.discounted_price * quantity
+        if wallet.balance < expected_total:
+            messages.error(request, "Số dư ví không đủ để mua hàng. Vui lòng nạp thêm tiền.")
+            return redirect(f"{reverse('buy_now_checkout')}?product_id={product_id}&quantity={quantity}")
+
+        order = Order.objects.create(customer=customer)
+        OrderDetail.objects.create(
+            order=order,
+            product=product,
+            quantity=quantity,
+            unit_price=product.price,
+            discount_percent=product.discount_percent
+        )
+        product.stock_quantity -= quantity
+        product.save(update_fields=["stock_quantity"])
+        order.recalculate_totals()
+        
+        wallet.balance = int(Decimal(wallet.balance) - order.total_amount)
+        wallet.save()
+        
+        messages.success(request, "Dat hang thanh cong (Mua ngay)!")
+        return redirect("order_detail", order_id=order.id)
+            
+    else:
+        messages.error(request, "Nguon thanh toan khong hop le.")
+        return redirect("home")

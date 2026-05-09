@@ -2,7 +2,6 @@ from decimal import Decimal, ROUND_HALF_UP
 
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.utils import timezone
 
 """
 Module models cho app `products`.
@@ -10,7 +9,6 @@ Module models cho app `products`.
 Nhóm model chính:
 - Product: thông tin sản phẩm bán ra.
 - Cart, CartItem: giỏ hàng và các dòng sản phẩm trong giỏ.
-- DiscountCode: mã giảm giá áp cho đơn hàng.
 """
 
 # Quy uoc lam tron tien ve 2 chu so thap phan.
@@ -58,6 +56,13 @@ class Product(models.Model):
     def formatted_price(self) -> str:
         """Giá đã giảm, định dạng chuỗi VND để hiển thị UI."""
         rounded = self.discounted_price.quantize(Decimal("1"), rounding=ROUND_HALF_UP)
+        amount = int(rounded)
+        return f"{amount:,}".replace(",", ".") + " đ"
+
+    @property
+    def formatted_original_price(self) -> str:
+        """Giá gốc chưa giảm, định dạng chuỗi VND."""
+        rounded = self.price.quantize(Decimal("1"), rounding=ROUND_HALF_UP)
         amount = int(rounded)
         return f"{amount:,}".replace(",", ".") + " đ"
 
@@ -193,90 +198,11 @@ class CartItem(models.Model):
         super().save(*args, **kwargs)
 
 
-class DiscountCode(models.Model):
-    """Mã giảm giá có thể áp dụng theo điều kiện thời gian và lượt sử dụng."""
-
-    code = models.CharField(max_length=50, unique=True)
-    discount_percent = models.DecimalField(max_digits=5, decimal_places=2)
-    is_active = models.BooleanField(default=True)
-    valid_from = models.DateTimeField(blank=True, null=True)
-    valid_to = models.DateTimeField(blank=True, null=True)
-    usage_limit = models.PositiveIntegerField(blank=True, null=True)
-    used_count = models.PositiveIntegerField(default=0)
+class ProductImage(models.Model):
+    """Ảnh phụ (gallery) của sản phẩm."""
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="images")
+    image = models.ImageField(upload_to="products/images/gallery/")
     created_at = models.DateTimeField(auto_now_add=True)
 
-    def __str__(self) -> str:
-        """Trả về mã giảm giá để hiển thị gọn trong trang quản trị/nhật ký."""
-        return self.code
-
-    @property
-    def is_usage_limit_reached(self) -> bool:
-        """Kiểm tra mã đã chạm giới hạn số lần dùng hay chưa."""
-        return self.usage_limit is not None and self.used_count >= self.usage_limit
-
-    def clean(self) -> None:
-        """
-        Validate dữ liệu mã giảm giá.
-
-        Các rule:
-        - 0 <= discount_percent <= 100
-        - valid_from <= valid_to
-        - used_count <= usage_limit (nếu có giới hạn)
-        """
-        errors = {}
-
-        # Rang buoc tinh hop le cua ma giam gia theo thoi gian va gioi han su dung.
-        if self.discount_percent is not None and (
-            self.discount_percent < 0 or self.discount_percent > PERCENT_BASE
-        ):
-            errors["discount_percent"] = "Phan tram giam gia phai tu 0 den 100."
-
-        if self.valid_from and self.valid_to and self.valid_from > self.valid_to:
-            errors["valid_to"] = "Thoi gian ket thuc phai sau thoi gian bat dau."
-
-        if self.usage_limit is not None and self.used_count > self.usage_limit:
-            errors["used_count"] = "So lan da dung khong duoc vuot qua gioi han su dung."
-
-        if errors:
-            raise ValidationError(errors)
-
-    def is_valid(self, at_time=None) -> bool:
-        """
-        Kiểm tra mã giảm giá có hợp lệ tại thời điểm `at_time` hay không.
-
-        Điều kiện hợp lệ:
-        - is_active = True
-        - nằm trong khoảng hiệu lực (nếu có đặt mốc thời gian)
-        - chưa vượt usage_limit
-        """
-        current_time = at_time or timezone.now()
-
-        if not self.is_active:
-            return False
-
-        if self.valid_from and current_time < self.valid_from:
-            return False
-
-        if self.valid_to and current_time > self.valid_to:
-            return False
-
-        if self.is_usage_limit_reached:
-            return False
-
-        return True
-
-    def mark_as_used(self, save: bool = True) -> None:
-        """
-        Tăng số lần sử dụng mã lên 1.
-
-        Lưu ý:
-        - Nếu đã đạt giới hạn thì raise ValidationError.
-        - `save=True` sẽ lưu ngay `used_count`.
-        """
-        if self.is_usage_limit_reached:
-            raise ValidationError({"usage_limit": "Ma giam gia da dat gioi han su dung."})
-
-        self.used_count += 1
-
-        if save:
-            self.save(update_fields=["used_count"])
+    def __str__(self):
+        return f"Image for {self.product.product_name}"

@@ -1,7 +1,6 @@
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth import get_user_model
-from django.db import transaction
 from django.db.models import F
 from django.shortcuts import redirect, render
 from django.urls import include, path
@@ -23,7 +22,7 @@ File này đang chứa cả:
 
 Mục tiêu ghi chú:
 - Giải thích "hàm này làm gì".
-- Chỉ ra "điểm cần lưu ý" (phân quyền, transaction, validate, lock dữ liệu).
+- Chỉ ra "điểm cần lưu ý" (phân quyền, validate, dữ liệu).
 - Giữ nguyên logic hiện tại, chỉ thêm chú thích để dễ học và bảo trì.
 """
 
@@ -375,13 +374,11 @@ def topup_admin_review(request):
 
     Luồng POST:
     - Nhận request_id + action (APPROVE/REJECT).
-    - Khóa bản ghi bằng select_for_update trong transaction.
-    - Chỉ xử lý khi trạng thái còn PENDING.
+    - Khóa bản ghi: Đã đơn giản hóa, không dùng select_for_update.
     - Nếu APPROVE: chuyển trạng thái APPROVED và cộng tiền vào ví.
     - Nếu REJECT: chuyển trạng thái REJECTED.
 
     Điểm cần lưu ý quan trọng:
-    - `transaction.atomic()` + `select_for_update()` giúp tránh duyệt trùng khi nhiều staff/admin thao tác đồng thời.
     - Cộng tiền dùng `F("balance") + topup.amount` để cập nhật an toàn ở phía cơ sở dữ liệu.
     """
     # Chỉ staff đã đăng nhập mới có quyền vào trang này.
@@ -391,53 +388,33 @@ def topup_admin_review(request):
 
     # Khi staff gửi thao tác duyệt/từ chối.
     if request.method == "POST":
-        request_id_raw = request.POST.get("request_id", "").strip()
+        request_id = request.POST.get("request_id")
         action = (request.POST.get("action") or "").strip().upper()
 
-        # request_id phải là số hợp lệ.
-        if not request_id_raw.isdigit():
-            messages.error(request, "Yêu cầu không hợp lệ.")
-            return redirect("topup_admin_review")
+        # Lấy yêu cầu nạp tiền trực tiếp bằng ID.
+        # Vì Admin chọn từ danh sách "Chờ duyệt" nên mặc định yêu cầu phải tồn tại và đang ở trạng thái PENDING.
+        topup = TopUpRequest.objects.select_related("customer").get(pk=request_id)
 
-        request_id = int(request_id_raw)
-        try:
-            # Mở giao dịch để đảm bảo đồng nhất cho cả đổi trạng thái + cộng ví.
-            with transaction.atomic():
-                # Khóa bản ghi yêu cầu nạp tiền để ngăn xử lý đồng thời.
-                topup = (
-                    TopUpRequest.objects.select_for_update()
-                    .select_related("customer")
-                    .get(pk=request_id)
-                )
+        if action == "APPROVE":
+            # Duyệt yêu cầu: đổi trạng thái -> cộng tiền ví.
+            topup.status = TopUpRequest.Status.APPROVED
+            topup.save()
 
-                # Chỉ xử lý yêu cầu còn chờ; tránh bấm duyệt lại nhiều lần.
-                if topup.status != TopUpRequest.Status.PENDING:
-                    messages.warning(request, "Yêu cầu này đã được xử lý trước đó.")
-                    return redirect("topup_admin_review")
+            # Cộng tiền vào ví của khách hàng
+            Wallet.objects.filter(customer=topup.customer).update(
+                balance=F("balance") + topup.amount
+            )
+            messages.success(
+                request,
+                f"Đã duyệt yêu cầu #{topup.id} và cộng {_format_currency_vnd(topup.amount)} vào ví.",
+            )
+        elif action == "REJECT":
+            # Từ chối yêu cầu: chỉ đổi trạng thái.
+            topup.status = TopUpRequest.Status.REJECTED
+            topup.save()
+            messages.info(request, f"Đã từ chối yêu cầu #{topup.id}.")
 
-                if action == "APPROVE":
-                    # Duyệt yêu cầu: đổi trạng thái -> cộng tiền ví.
-                    topup.status = TopUpRequest.Status.APPROVED
-                    topup.save(update_fields=["status"])
-                    Wallet.objects.filter(customer=topup.customer).update(
-                        balance=F("balance") + topup.amount
-                    )
-                    messages.success(
-                        request,
-                        f"Đã chấp nhận yêu cầu #{topup.id} và cộng {_format_currency_vnd(topup.amount)}.",
-                    )
-                elif action == "REJECT":
-                    # Từ chối yêu cầu: chỉ đổi trạng thái, không cộng ví.
-                    topup.status = TopUpRequest.Status.REJECTED
-                    topup.save(update_fields=["status"])
-                    messages.info(request, f"Đã từ chối yêu cầu #{topup.id}.")
-                else:
-                    messages.error(request, "Hành động không hợp lệ.")
-        except TopUpRequest.DoesNotExist:
-            # request_id không tồn tại trong DB.
-            messages.error(request, "Không tìm thấy yêu cầu nạp tiền.")
-
-        # Dù thành công hay lỗi đều quay về trang duyệt để hiển thị thông báo.
+        # Quay về trang danh sách chờ duyệt (yêu cầu vừa xử lý sẽ biến mất khỏi danh sách này).
         return redirect("topup_admin_review")
 
     # Danh sách yêu cầu đang chờ xử lý.
@@ -446,14 +423,6 @@ def topup_admin_review(request):
         .select_related("customer__user")
         .order_by("-id")
         .values("id", "amount", "note", "status", "customer__full_name", "customer__user__username")
-    )
-
-    # Danh sách yêu cầu đã xử lý gần đây (30 dòng).
-    recent_rows = (
-        TopUpRequest.objects.exclude(status=TopUpRequest.Status.PENDING)
-        .select_related("customer__user")
-        .order_by("-id")
-        .values("id", "amount", "note", "status", "customer__full_name", "customer__user__username")[:30]
     )
 
     def _to_view_rows(rows):
@@ -473,7 +442,6 @@ def topup_admin_review(request):
     # Context trả về cho template trang duyệt.
     context = {
         "pending_rows": _to_view_rows(pending_rows),
-        "recent_rows": _to_view_rows(recent_rows),
     }
     return render(request, "topup_admin_review.html", context)
 
@@ -570,37 +538,35 @@ def register_view(request):
     Luồng chính:
     - GET: hiển thị form trống.
     - POST: kiểm tra form.
-    - Nếu hợp lệ: tạo User + Customer + Wallet trong 1 transaction.
+    - Nếu hợp lệ: tạo User + Customer + Wallet tuần tự.
     - Thành công: báo và chuyển sang login.
 
     Điểm cần lưu ý:
-    - Dùng `transaction.atomic()` để tránh trạng thái dở dang
-      (vd tạo User xong nhưng lỗi khi tạo Customer/Wallet).
+    - Dùng User model chuẩn của Django.
+    - Nếu hợp lệ: tạo User + Customer + Wallet tuần tự.
     """
     if request.method == "POST":
         form = RegisterForm(request.POST)
         if form.is_valid():
             cleaned = form.cleaned_data
-            # Tạo đồng bộ nhiều bảng trong cùng transaction.
-            with transaction.atomic():
-                user = get_user_model().objects.create_user(
-                    username=cleaned["username"],
-                    email=cleaned["email"],
-                    password=cleaned["password1"],
-                )
+            user = get_user_model().objects.create_user(
+                username=cleaned["username"],
+                email=cleaned["email"],
+                password=cleaned["password1"],
+            )
 
-                # Hồ sơ khách hàng gắn với tài khoản vừa tạo.
-                customer = Customer.objects.create(
-                    user=user,
-                    full_name=cleaned["full_name"],
-                    phone_number=cleaned["phone_number"],
-                    address=cleaned.get("address") or None,
-                    date_of_birth=cleaned.get("date_of_birth"),
-                    gender=cleaned.get("gender") or Customer.Gender.OTHER,
-                )
+            # Hồ sơ khách hàng gắn với tài khoản vừa tạo.
+            customer = Customer.objects.create(
+                user=user,
+                full_name=cleaned["full_name"],
+                phone_number=cleaned["phone_number"],
+                address=cleaned.get("address") or None,
+                date_of_birth=cleaned.get("date_of_birth"),
+                gender=cleaned.get("gender") or Customer.Gender.OTHER,
+            )
 
-                # Tạo ví ban đầu cho khách hàng.
-                Wallet.objects.create(customer=customer)
+            # Tạo ví ban đầu cho khách hàng.
+            Wallet.objects.create(customer=customer)
 
             messages.success(request, "Dang ky thanh cong. Vui long dang nhap.")
             return redirect("login")

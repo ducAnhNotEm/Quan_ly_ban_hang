@@ -1,0 +1,67 @@
+@startuml
+title Biểu đồ Use Case - Hệ thống Quản lý Bán hàng
+
+left to right direction
+
+actor "Khách vãng lai" as Guest
+actor "Khách hàng" as Customer
+actor "Admin/Staff" as Admin
+
+Customer --|> Guest
+
+rectangle "Hệ thống Quản lý Bán hàng" {
+
+  package "Quản lý tài khoản" {
+    usecase "Đăng ký" as UC_Register
+    usecase "Đăng nhập" as UC_Login
+    usecase "Đăng xuất" as UC_Logout
+  }
+
+  package "Mua hàng và giỏ hàng" {
+    usecase "Xem sản phẩm" as UC_ViewProducts
+    usecase "Xem chi tiết sản phẩm" as UC_ViewDetail
+    usecase "Thêm sản phẩm vào giỏ" as UC_AddToCart
+    usecase "Quản lý giỏ hàng" as UC_ManageCart
+    usecase "Đặt hàng và thanh toán" as UC_Checkout
+    usecase "Xem lịch sử đơn hàng" as UC_ViewOrders
+  }
+
+  package "Ví tiền và nạp tiền" {
+    usecase "Xem số dư ví" as UC_ViewWallet
+    usecase "Gửi yêu cầu nạp tiền" as UC_TopUpRequest
+    usecase "Duyệt yêu cầu nạp tiền" as UC_ApproveTopUp
+  }
+
+  package "Quản trị hệ thống" {
+    usecase "Thêm sản phẩm" as UC_AddProduct
+    usecase "Quản lý sản phẩm" as UC_ManageProduct
+    usecase "Xem danh sách đơn hàng" as UC_ManageOrders
+    usecase "Xem thống kê bán hàng" as UC_ViewStats
+  }
+}
+
+Guest --> UC_Register
+Guest --> UC_Login
+Guest --> UC_ViewProducts
+Guest --> UC_ViewDetail
+
+Customer --> UC_Logout
+Customer --> UC_AddToCart
+Customer --> UC_ManageCart
+Customer --> UC_Checkout
+Customer --> UC_ViewOrders
+Customer --> UC_ViewWallet
+Customer --> UC_TopUpRequest
+
+Admin --> UC_Login
+Admin --> UC_Logout
+Admin --> UC_AddProduct
+Admin --> UC_ManageProduct
+Admin --> UC_ManageOrders
+Admin --> UC_ApproveTopUp
+Admin --> UC_ViewStats
+
+UC_AddToCart ..> UC_ViewDetail : <<extend>>
+UC_Checkout ..> UC_ManageCart : <<extend>>
+
+@enduml

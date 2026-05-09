@@ -1,119 +1,94 @@
 @startuml
-title Sales Management - Activity Diagram (Add Cart, Buy Now, Cart Checkout)
+title Biểu đồ hoạt động - Thêm giỏ hàng và thanh toán đơn hàng
 
 start
-:Customer thao tac mua hang;
 
-if (Da dang nhap?) then (No)
-  :Redirect login;
-  stop
-endif
+partition "Khách hàng" {
+  :Thao tác mua hàng;
 
-if (La staff/admin?) then (Yes)
-  :Bao loi, khong duoc mua hang;
-  stop
-endif
+  if (Đã đăng nhập?) then (Có)
+    if (Là Admin/Staff?) then (Có)
+      :Thông báo tài khoản quản trị không được mua hàng;
+      :Quay về trang chủ;
+      stop
+    else (Không)
 
-if (Ton tai customer_profile?) then (No)
-  :Bao loi va redirect home;
-  stop
-endif
+      if (Chọn thêm vào giỏ hàng?) then (Có)
+        :Nhập số lượng sản phẩm;
 
-if (Chon Them vao gio?) then (Yes)
-  :Nhap quantity;
-  if (Quantity hop le?) then (No)
-    :Bao loi quantity;
+        if (Số lượng hợp lệ?) then (Có)
+          if (Số lượng còn đủ trong kho?) then (Có)
+            :Lấy hoặc tạo giỏ hàng;
+            :Thêm sản phẩm vào giỏ hàng;
+            :Cập nhật số lượng sản phẩm trong giỏ;
+            :Đánh dấu sản phẩm được chọn;
+            :Thông báo thêm vào giỏ hàng thành công;
+            stop
+          else (Không)
+            :Thông báo số lượng vượt quá tồn kho;
+            stop
+          endif
+        else (Không)
+          :Thông báo số lượng không hợp lệ;
+          stop
+        endif
+
+      else (Không)
+        :Chuyển sang quy trình thanh toán;
+      endif
+
+    endif
+  else (Không)
+    :Chuyển đến trang đăng nhập;
     stop
   endif
-  if (San pham con hang va du ton kho?) then (No)
-    :Bao loi ton kho;
-    stop
-  endif
-  :get_or_create Cart va CartItem;
-  if (Tong quantity trong gio > ton kho?) then (Yes)
-    :Bao loi vuot ton kho;
-    stop
-  endif
-  :Luu CartItem (isSelected=true);
-  :Thong bao thanh cong;
-  stop
-endif
+}
 
-if (Chon Mua ngay?) then (Yes)
-  :Kiem tra quantity + ton kho;
-  if (Du lieu khong hop le?) then (Yes)
-    :Bao loi;
-    stop
-  endif
+partition "Thanh toán" {
+  :Chọn hình thức mua hàng;
 
-  :Neu co discount_code, validate\n(isActive/time/usageLimit);
-  if (Discount code khong hop le?) then (Yes)
-    :Bao loi ma giam gia;
-    stop
-  endif
+  if (Mua từ giỏ hàng?) then (Có)
+    :Lấy các sản phẩm đã chọn trong giỏ hàng;
 
-  :Tinh subtotal, discount, total;
-  :Chuyen total sang so nguyen VND;
-  if (Khong quy doi duoc VND integer?) then (Yes)
-    :Bao loi gia tri thanh toan;
-    stop
+    if (Giỏ hàng có sản phẩm?) then (Có)
+      :Tính tổng tiền đơn hàng;
+    else (Không)
+      :Thông báo giỏ hàng trống;
+      stop
+    endif
+
+  else (Không)
+    :Chọn mua ngay một sản phẩm;
+    :Nhập số lượng mua ngay;
+
+    if (Số lượng hợp lệ và còn đủ tồn kho?) then (Có)
+      :Tính tổng tiền sản phẩm mua ngay;
+    else (Không)
+      :Thông báo số lượng không hợp lệ hoặc vượt tồn kho;
+      stop
+    endif
   endif
 
-  :Khoa Wallet (select_for_update);
-  if (Khong tim thay wallet hoac so du khong du?) then (Yes)
-    :Bao loi thanh toan;
+  if (Số dư ví đủ để thanh toán?) then (Có)
+    :Tạo đơn hàng mới;
+    :Tạo chi tiết đơn hàng;
+    :Trừ số lượng sản phẩm trong kho;
+    :Trừ tiền trong ví khách hàng;
+
+    if (Mua từ giỏ hàng?) then (Có)
+      :Xóa sản phẩm đã mua khỏi giỏ hàng;
+    else (Không)
+      :Không cần cập nhật giỏ hàng;
+    endif
+
+    :Cập nhật trạng thái đơn hàng thành đã thanh toán;
+    :Thông báo đặt hàng thành công;
+    :Xem chi tiết đơn hàng;
+    stop
+
+  else (Không)
+    :Thông báo số dư ví không đủ;
     stop
   endif
-
-  :Khoa Product, tru stock;
-  :Tao Order + OrderDetail;
-  :Tru wallet.balance;
-  if (Co discount_code?) then (Yes)
-    :discount_code.usedCount += 1;
-  endif
-  :Redirect Order Detail + success;
-  stop
-else (Checkout gio hang)
-  :Lay cac CartItem isSelected=true;
-  if (Khong co item duoc chon?) then (Yes)
-    :Bao loi;
-    stop
-  endif
-
-  :Khoa Product list (select_for_update);
-  if (Co item khong du ton kho?) then (Yes)
-    :Bao loi ton kho;
-    stop
-  endif
-
-  :Tinh subtotal, discount, total cho tat ca item;
-  :Neu co discount_code, validate;
-  if (Discount code khong hop le?) then (Yes)
-    :Bao loi ma giam gia;
-    stop
-  endif
-
-  :Tinh coupon discount va final total;
-  :Chuyen final total sang so nguyen VND;
-  if (Khong quy doi duoc VND integer?) then (Yes)
-    :Bao loi gia tri thanh toan;
-    stop
-  endif
-
-  :Khoa Wallet (select_for_update);
-  if (Khong tim thay wallet hoac so du khong du?) then (Yes)
-    :Bao loi thanh toan;
-    stop
-  endif
-
-  :Tao Order;
-  :Loop tung item da chon -> Tao OrderDetail + tru stock;
-  :Tru wallet.balance;
-  if (Co discount_code?) then (Yes)
-    :discount_code.usedCount += 1;
-  endif
-  :Xoa selected CartItem da thanh toan;
-  :Redirect Order Detail + success;
-  stop
-endif
+}
 @enduml

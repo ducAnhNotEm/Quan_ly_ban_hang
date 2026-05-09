@@ -31,8 +31,9 @@
           <nav class="hidden items-center gap-6 md:flex">
             <a class="py-1 text-sm font-semibold transition-colors {% if request.resolver_match.url_name == 'home' %}text-indigo-700 border-b-2 border-indigo-600{% else %}text-slate-600 hover:text-indigo-600{% endif %}" href="{% url 'home' %}">Trang chủ</a>
             {% if request.user.is_authenticated and request.user.is_staff %}
-            <a class="text-sm text-slate-600 transition-colors hover:text-indigo-600" href="{% url 'products:admin_product_create' %}">Thêm sản phẩm</a>
-            <a class="text-sm text-slate-600 transition-colors hover:text-indigo-600" href="{% url 'admin_sales_stats' %}">Thống kê bán hàng</a>
+            <a class="py-1 text-sm font-semibold transition-colors {% if request.resolver_match.url_name == 'topup_admin_review' %}text-indigo-700 border-b-2 border-indigo-600{% else %}text-slate-600 hover:text-indigo-600{% endif %}" href="{% url 'topup_admin_review' %}">Duyệt nạp tiền</a>
+            <a class="py-1 text-sm font-semibold transition-colors {% if request.resolver_match.url_name == 'admin_product_create' %}text-indigo-700 border-b-2 border-indigo-600{% else %}text-slate-600 hover:text-indigo-600{% endif %}" href="{% url 'products:admin_product_create' %}">Thêm sản phẩm</a>
+            <a class="py-1 text-sm font-semibold transition-colors {% if request.resolver_match.url_name == 'admin_sales_stats' %}text-indigo-700 border-b-2 border-indigo-600{% else %}text-slate-600 hover:text-indigo-600{% endif %}" href="{% url 'admin_sales_stats' %}">Thống kê bán hàng</a>
             {% endif %}
             
             {% if request.user.is_authenticated and not request.user.is_staff %}

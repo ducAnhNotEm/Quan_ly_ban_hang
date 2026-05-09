@@ -3,7 +3,7 @@ from django.test import TestCase
 from django.urls import reverse
 from django.contrib.auth import get_user_model
 from accounts.models import Customer, Wallet
-from products.models import Product, Cart, CartItem
+from products.models import Product
 from orders.models import Order, OrderDetail
 
 class OrdersSimpleTests(TestCase):

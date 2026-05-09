@@ -31,8 +31,6 @@ class Order(models.Model):
     # Các trường tổng tiền của đơn (đều lưu kiểu Decimal có 2 chữ số thập phân).
     sub_total_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     discount_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    coupon_code = models.CharField(max_length=100, blank=True, default="")
-    coupon_discount_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     total_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     status = models.CharField(max_length=10, choices=Status.choices, default=Status.PAID)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -57,7 +55,7 @@ class Order(models.Model):
         Công thức:
         - sub_total_amount = tổng tiền gốc của các dòng.
         - discount_amount = tổng tiền giảm giá theo từng dòng.
-        - total_amount = sub_total_amount - discount_amount - coupon_discount_amount.
+        - total_amount = sub_total_amount - discount_amount.
 
         Lưu ý:
         - Có làm tròn theo `MONEY_QUANTIZE`.
@@ -72,12 +70,11 @@ class Order(models.Model):
             gross_sub_total += detail.line_total_before_discount
             total_discount += detail.discount_amount or Decimal("0")
 
-        coupon_discount = self.coupon_discount_amount or Decimal("0")
-        net_total = gross_sub_total - total_discount - coupon_discount
+        net_total = gross_sub_total - total_discount
 
         self.sub_total_amount = gross_sub_total.quantize(MONEY_QUANTIZE, rounding=ROUND_HALF_UP)
         self.discount_amount = total_discount.quantize(MONEY_QUANTIZE, rounding=ROUND_HALF_UP)
-        # Khong de tong tien am neu coupon lon hon tong gia tri don.
+        # Khong de tong tien am.
         self.total_amount = max(net_total, Decimal("0")).quantize(
             MONEY_QUANTIZE,
             rounding=ROUND_HALF_UP,

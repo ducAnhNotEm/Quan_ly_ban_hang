@@ -1,60 +1,79 @@
 @startuml
-title Sales Management - Activity Diagram (Top Up Request + Admin Review)
+title Biểu đồ hoạt động - Gửi yêu cầu nạp tiền và duyệt yêu cầu
 
 start
-:Customer mo trang top up request;
 
-if (Da dang nhap?) then (No)
-  :Redirect login;
-  stop
-endif
+partition "Khách hàng" {
+  :Truy cập chức năng gửi yêu cầu nạp tiền;
 
-if (La staff/admin?) then (Yes)
-  :Redirect home;
-  stop
-endif
+  if (Đã đăng nhập?) then (Có)
+    if (Là Admin/Staff?) then (Có)
+      :Chuyển sang luồng Admin/Staff duyệt yêu cầu;
+    else (Không)
+      :Nhập số tiền nạp và lý do;
+      :Gửi yêu cầu nạp tiền;
 
-:Nhap amount va note;
-:Submit form;
+      if (Số tiền là số nguyên dương hợp lệ?) then (Có)
+        if (Lý do bị bỏ trống?) then (Không)
+          :Tạo yêu cầu nạp tiền mới;
 
-if (Format amount hop le?) then (No)
-  :Hien thi loi so tien khong hop le;
-  stop
-endif
+          note right
+            TopUpRequest.status = PENDING
+            Yêu cầu chờ Admin/Staff duyệt
+          end note
 
-if (Amount > 0?) then (No)
-  :Hien thi loi amount phai > 0;
-  stop
-endif
+          :Hiển thị thông báo gửi yêu cầu thành công;
+          :Xem lịch sử yêu cầu nạp tiền;
+          stop
+        else (Có)
+          :Hiển thị lỗi yêu cầu nhập lý do;
+          stop
+        endif
+      else (Không)
+        :Hiển thị lỗi số tiền không hợp lệ;
+        stop
+      endif
+    endif
 
-if (Ton tai customer_profile?) then (No)
-  :Thong bao loi, redirect home;
-  stop
-endif
-
-:Tao TopUpRequest(status=PENDING);
-:Thong bao gui yeu cau thanh cong;
-:Redirect wallet;
-
-:Admin vao danh sach top up request;
-
-if (Admin chon Approve?) then (Yes)
-  :Lay request theo id;
-  if (Status != PENDING?) then (Yes)
-    :Thong bao da xu ly truoc do;
-  else (No)
-    :wallet.balance += amount;
-    :TopUpRequest.status = APPROVED;
-    :Thong bao duyet thanh cong;
+  else (Không)
+    :Chuyển đến trang đăng nhập;
+    stop
   endif
-else (Reject)
-  :Lay request theo id;
-  if (Status != PENDING?) then (Yes)
-    :Thong bao da xu ly truoc do;
-  else (No)
-    :TopUpRequest.status = REJECTED;
-    :Thong bao tu choi thanh cong;
+}
+
+partition "Admin / Staff" {
+  :Truy cập chức năng duyệt yêu cầu nạp tiền;
+
+  if (Đã đăng nhập?) then (Có)
+    if (Là Admin/Staff?) then (Có)
+      :Xem danh sách yêu cầu nạp tiền đang chờ duyệt;
+      :Chọn một yêu cầu cần xử lý;
+      :Chọn thao tác Duyệt hoặc Từ chối;
+
+      if (Chọn Duyệt?) then (Có)
+        :Cập nhật trạng thái yêu cầu thành APPROVED;
+        :Cộng số tiền vào ví khách hàng;
+        :Yêu cầu biến mất khỏi danh sách chờ duyệt;
+        :Thông báo duyệt và cộng tiền thành công;
+      else (Không)
+        :Cập nhật trạng thái yêu cầu thành REJECTED;
+        :Yêu cầu biến mất khỏi danh sách chờ duyệt;
+        :Thông báo từ chối yêu cầu thành công;
+      endif
+
+      :Quay lại danh sách yêu cầu nạp tiền đang chờ duyệt;
+
+    else (Không)
+      :Từ chối quyền truy cập;
+      :Chuyển về trang chủ;
+      stop
+    endif
+
+  else (Không)
+    :Chuyển đến trang đăng nhập;
+    stop
   endif
-endif
+}
+
 stop
 @enduml

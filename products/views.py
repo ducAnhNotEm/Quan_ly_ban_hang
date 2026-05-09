@@ -1,6 +1,7 @@
-﻿from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, render, redirect
+from django.contrib import messages
 
-from products.models import Product
+from products.models import Product, ProductImage
 
 """
 Module xử lý giao diện cho app `products`.
@@ -14,16 +15,47 @@ Các hàm hiện có:
 
 def admin_product_create(request):
     """
-    Hiển thị trang quản trị thêm sản phẩm.
+    Hiển thị trang quản trị thêm sản phẩm và xử lý lưu sản phẩm mới.
 
     Luồng:
-    - Lấy danh mục sản phẩm duy nhất từ DB để đổ vào datalist.
-    - Trả về template `admin_product_create.html`.
-
-    Lưu ý:
-    - Hàm này hiện chủ yếu phục vụ hiển thị form;
-      logic lưu sản phẩm có thể xử lý ở bước khác.
+    - Nếu là GET: lấy danh mục sản phẩm duy nhất từ DB để hỗ trợ nhập liệu.
+    - Nếu là POST: tạo sản phẩm mới từ dữ liệu form và file ảnh.
+    - Sau khi tạo thành công: thông báo và chuyển hướng về trang chủ.
     """
+    if not request.user.is_authenticated or not request.user.is_staff:
+        messages.error(request, "Bạn không có quyền truy cập trang này.")
+        return redirect("home")
+
+    if request.method == "POST":
+        product_name = request.POST.get("product_name")
+        category = request.POST.get("category")
+        description = request.POST.get("description")
+        price = request.POST.get("price")
+        discount_percent = request.POST.get("discount_percent") or 0
+        stock_quantity = request.POST.get("stock_quantity")
+        main_image = request.FILES.get("main_image")
+
+        try:
+            product = Product.objects.create(
+                product_name=product_name,
+                category=category,
+                description=description,
+                price=price,
+                discount_percent=discount_percent,
+                stock_quantity=stock_quantity,
+                image=main_image
+            )
+            
+            # Lưu các ảnh phụ (gallery) nếu có
+            gallery_images = request.FILES.getlist("gallery_images")
+            for img in gallery_images:
+                ProductImage.objects.create(product=product, image=img)
+
+            messages.success(request, f"Đã thêm sản phẩm '{product_name}' thành công.")
+            return redirect("home")
+        except Exception as e:
+            messages.error(request, f"Lỗi khi thêm sản phẩm: {e}")
+
     # Danh sách danh mục có sẵn để hỗ trợ quản trị nhập nhanh.
     categories = [
         category
