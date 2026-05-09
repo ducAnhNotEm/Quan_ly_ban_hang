@@ -89,7 +89,7 @@ class OrderDetail(models.Model):
 
     # Mỗi dòng thuộc về một đơn và một sản phẩm.
     order = models.ForeignKey("orders.Order", on_delete=models.CASCADE, related_name="details")
-    product = models.ForeignKey("products.Product", on_delete=models.CASCADE, related_name="order_details")
+    product = models.ForeignKey("products.Product", on_delete=models.SET_NULL, null=True, blank=True, related_name="order_details")
     # Thông tin tính tiền trên từng dòng.
     quantity = models.PositiveIntegerField(default=1)
     unit_price = models.DecimalField(max_digits=12, decimal_places=2)

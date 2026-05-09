@@ -1,0 +1,75 @@
+@startuml
+title Biểu đồ hoạt động - Admin/Staff quản lý sản phẩm
+
+start
+
+partition "Admin/Staff" {
+  :Truy cập trang quản lý sản phẩm;
+
+  if (Đã đăng nhập?) then (Có)
+
+    if (Là Admin/Staff?) then (Có)
+      :Hiển thị danh sách sản phẩm;
+      :Chọn thao tác quản lý sản phẩm;
+
+      if (Thêm sản phẩm?) then (Có)
+        :Nhập thông tin sản phẩm mới;
+        :Nhập tên, danh mục, mô tả;
+        :Nhập giá, giảm giá, số lượng tồn kho;
+        :Chọn ảnh sản phẩm nếu có;
+
+        if (Dữ liệu hợp lệ?) then (Có)
+          :Lưu sản phẩm mới vào hệ thống;
+          :Thông báo thêm sản phẩm thành công;
+          :Quay lại danh sách sản phẩm;
+        else (Không)
+          :Hiển thị lỗi dữ liệu;
+          :Yêu cầu nhập lại thông tin;
+        endif
+
+      elseif (Sửa sản phẩm?) then (Có)
+        :Chọn sản phẩm cần sửa;
+        :Hiển thị form thông tin hiện tại;
+        :Cập nhật thông tin sản phẩm;
+
+        if (Dữ liệu hợp lệ?) then (Có)
+          :Lưu thay đổi sản phẩm;
+          :Thông báo sửa sản phẩm thành công;
+          :Quay lại danh sách sản phẩm;
+        else (Không)
+          :Hiển thị lỗi dữ liệu;
+          :Yêu cầu nhập lại thông tin;
+        endif
+
+      elseif (Xóa sản phẩm?) then (Có)
+        :Chọn sản phẩm cần xóa;
+        :Hiển thị xác nhận xóa;
+
+        if (Admin xác nhận xóa?) then (Có)
+          :Xóa sản phẩm khỏi hệ thống;
+          :Thông báo xóa sản phẩm thành công;
+          :Quay lại danh sách sản phẩm;
+        else (Không)
+          :Hủy thao tác xóa;
+          :Quay lại danh sách sản phẩm;
+        endif
+
+      else (Không)
+        :Không thực hiện thay đổi;
+        :Quay lại trang quản trị;
+      endif
+
+    else (Không)
+      :Từ chối quyền truy cập;
+      :Chuyển về trang chủ;
+      stop
+    endif
+
+  else (Không)
+    :Chuyển đến trang đăng nhập;
+    stop
+  endif
+}
+
+stop
+@enduml

@@ -10,6 +10,7 @@ class User <<Django Auth>> {
   - email: string
   - password: string
   - is_staff: bool
+  - is_active: bool
 }
 
 class Customer {
@@ -31,6 +32,7 @@ class TopUpRequest {
   - amount: bigint
   - note: text?
   - status: PENDING|APPROVED|REJECTED
+  - created_at: datetime
 }
 
 class Product {
@@ -44,6 +46,7 @@ class Product {
   - image: ImageField?
   - image_url: URLField?
   - created_at: datetime
+  - updated_at: datetime
 }
 
 class ProductImage {
@@ -83,17 +86,32 @@ class OrderDetail {
   - sub_total: decimal(12,2)
 }
 
-User "1" -- "0..1" Customer : có hồ sơ
-Customer "1" -- "0..1" Wallet : có ví
+User "1" -- "0..1" Customer : có hồ sơ khách hàng
+Customer "1" -- "0..1" Wallet : sở hữu ví
 Customer "1" -- "0..*" TopUpRequest : gửi yêu cầu nạp tiền
 Customer "1" -- "0..1" Cart : có giỏ hàng
 
-Cart "1" -- "0..*" CartItem : chứa sản phẩm
+Cart "1" -- "0..*" CartItem : chứa
 Product "1" -- "0..*" CartItem : được thêm vào giỏ
 
-Customer "1" -- "0..*" Order : đặt đơn hàng
-Order "1" -- "1..*" OrderDetail : gồm chi tiết đơn
-Product "1" -- "0..*" OrderDetail : xuất hiện trong đơn hàng
+Customer "1" -- "0..*" Order : đặt
+Order "1" -- "1..*" OrderDetail : gồm
+Product "1" -- "0..*" OrderDetail : xuất hiện trong
 
 Product "1" -- "0..*" ProductImage : có ảnh phụ
+
+User "1" -- "0..*" Product : Admin/Staff quản lý
+
+note right of User
+  Nếu is_staff = true:
+  người dùng có quyền quản trị
+  sản phẩm, đơn hàng và yêu cầu nạp tiền.
+end note
+
+note right of Product
+  Admin/Staff có thể:
+  - thêm sản phẩm
+  - sửa thông tin sản phẩm
+  - xóa sản phẩm
+end note
 @enduml

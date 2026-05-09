@@ -90,3 +90,97 @@ def product_detail(request, product_id: int):
     product = get_object_or_404(Product, pk=product_id)
     return render(request, "product_detail.html", {"product": product})
 
+
+def admin_product_list(request):
+    """Hiển thị danh sách sản phẩm cho Admin/Staff."""
+    if not request.user.is_authenticated or not request.user.is_staff:
+        messages.error(request, "Bạn không có quyền truy cập trang này.")
+        return redirect("home")
+    
+    products = Product.objects.all().order_by("-created_at")
+    return render(request, "admin_product_list.html", {"products": products})
+
+
+def admin_product_edit(request, product_id):
+    """Xử lý cập nhật thông tin sản phẩm."""
+    if not request.user.is_authenticated or not request.user.is_staff:
+        messages.error(request, "Bạn không có quyền truy cập trang này.")
+        return redirect("home")
+
+    product = get_object_or_404(Product, pk=product_id)
+
+    if request.method == "POST":
+        product_name = request.POST.get("product_name")
+        category = request.POST.get("category")
+        description = request.POST.get("description")
+        price = request.POST.get("price")
+        discount_percent = request.POST.get("discount_percent") or 0
+        stock_quantity = request.POST.get("stock_quantity")
+        main_image = request.FILES.get("main_image")
+
+        try:
+            if not product_name or not category or not price or not stock_quantity:
+                raise Exception("Vui lòng điền đầy đủ các trường bắt buộc.")
+
+            price_val = float(price)
+            if price_val < 0:
+                raise Exception("Giá không được âm.")
+            
+            discount_val = float(discount_percent)
+            if discount_val < 0 or discount_val > 100:
+                raise Exception("Phần trăm giảm giá phải từ 0 đến 100.")
+                
+            stock_val = int(stock_quantity)
+            if stock_val < 0:
+                raise Exception("Số lượng tồn kho không được âm.")
+
+            product.product_name = product_name
+            product.category = category
+            product.description = description
+            product.price = price_val
+            product.discount_percent = discount_val
+            product.stock_quantity = stock_val
+            
+            if main_image:
+                product.image = main_image
+                
+            product.save()
+
+            gallery_images = request.FILES.getlist("gallery_images")
+            if gallery_images:
+                for img in gallery_images:
+                    ProductImage.objects.create(product=product, image=img)
+
+            messages.success(request, f"Đã cập nhật sản phẩm '{product.product_name}' thành công.")
+            return redirect("products:detail", product_id=product.id)
+        except Exception as e:
+            messages.error(request, f"Lỗi khi cập nhật sản phẩm: {e}")
+
+    categories = [
+        c
+        for c in Product.objects.order_by("category").values_list("category", flat=True).distinct()
+        if c
+    ]
+    if product.category not in categories:
+        categories.append(product.category)
+        categories = sorted(categories)
+
+    context = {"product": product, "category_options": categories}
+    return render(request, "admin_product_edit.html", context)
+
+
+def admin_product_delete(request, product_id):
+    """Xử lý xóa sản phẩm."""
+    if not request.user.is_authenticated or not request.user.is_staff:
+        messages.error(request, "Bạn không có quyền truy cập trang này.")
+        return redirect("home")
+
+    product = get_object_or_404(Product, pk=product_id)
+
+    if request.method == "POST":
+        product_name = product.product_name
+        product.delete()
+        messages.success(request, f"Đã xóa sản phẩm '{product_name}' thành công.")
+        return redirect("products:admin_product_list")
+
+    return render(request, "admin_product_delete_confirm.html", {"product": product})

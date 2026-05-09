@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+
+{% block title %}Sửa thông tin khách hàng - Sales Store{% endblock %}
+
+{% block content %}
+<nav class="mb-8 flex items-center gap-2 text-sm text-slate-500">
+    <a class="hover:text-indigo-600" href="{% url 'home' %}">Trang chủ</a>
+    <span class="material-symbols-outlined text-sm">chevron_right</span>
+    <a class="hover:text-indigo-600" href="{% url 'admin_customer_list' %}">Quản lý khách hàng</a>
+    <span class="material-symbols-outlined text-sm">chevron_right</span>
+    <span>Sửa khách hàng</span>
+</nav>
+
+<section class="mb-8 rounded-2xl bg-gradient-to-r from-indigo-700 to-indigo-500 px-8 py-10 text-white flex justify-between items-center">
+    <div>
+        <h1 class="font-headline text-3xl font-extrabold md:text-4xl">Sửa khách hàng: {{ customer.user.username }}</h1>
+        <p class="mt-3 max-w-3xl text-indigo-100">
+            Cập nhật thông tin cơ bản cho hồ sơ khách hàng. Không thay đổi được tên đăng nhập, số dư ví và quyền.
+        </p>
+    </div>
+</section>
+
+<section class="rounded-2xl bg-white p-8 shadow-sm max-w-4xl mx-auto">
+    <form class="space-y-8" method="post">
+        {% csrf_token %}
+
+        {% if form.errors %}
+        <div class="rounded-xl bg-red-50 p-4 border border-red-200">
+            <h3 class="text-sm font-bold text-red-800">Vui lòng kiểm tra lại lỗi bên dưới:</h3>
+            <ul class="mt-2 list-disc pl-5 text-sm text-red-700">
+                {% for field in form %}
+                    {% for error in field.errors %}
+                        <li>{{ field.label }}: {{ error }}</li>
+                    {% endfor %}
+                {% endfor %}
+                {% for error in form.non_field_errors %}
+                    <li>{{ error }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+            <div>
+                <label class="mb-2 block text-sm font-bold text-slate-700" for="id_full_name">Họ và tên</label>
+                <input
+                    class="w-full rounded-xl border-slate-200 bg-white px-4 py-3 focus:border-indigo-400 focus:ring-indigo-200"
+                    id="id_full_name"
+                    name="full_name"
+                    type="text"
+                    maxlength="255"
+                    value="{{ form.full_name.value|default_if_none:'' }}"
+                    required
+                />
+            </div>
+
+            <div>
+                <label class="mb-2 block text-sm font-bold text-slate-700" for="id_email">Email</label>
+                <input
+                    class="w-full rounded-xl border-slate-200 bg-white px-4 py-3 focus:border-indigo-400 focus:ring-indigo-200"
+                    id="id_email"
+                    name="email"
+                    type="email"
+                    value="{{ form.email.value|default_if_none:'' }}"
+                    required
+                />
+            </div>
+
+            <div>
+                <label class="mb-2 block text-sm font-bold text-slate-700" for="id_phone_number">Số điện thoại</label>
+                <input
+                    class="w-full rounded-xl border-slate-200 bg-white px-4 py-3 focus:border-indigo-400 focus:ring-indigo-200"
+                    id="id_phone_number"
+                    name="phone_number"
+                    type="text"
+                    maxlength="20"
+                    value="{{ form.phone_number.value|default_if_none:'' }}"
+                    required
+                />
+            </div>
+
+            <div>
+                <label class="mb-2 block text-sm font-bold text-slate-700" for="id_gender">Giới tính</label>
+                <select
+                    class="w-full rounded-xl border-slate-200 bg-white px-4 py-3 focus:border-indigo-400 focus:ring-indigo-200"
+                    id="id_gender"
+                    name="gender"
+                >
+                    {% for value, label in form.fields.gender.choices %}
+                        <option value="{{ value }}" {% if form.gender.value == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label class="mb-2 block text-sm font-bold text-slate-700" for="id_date_of_birth">Ngày sinh</label>
+                <input
+                    class="w-full rounded-xl border-slate-200 bg-white px-4 py-3 focus:border-indigo-400 focus:ring-indigo-200"
+                    id="id_date_of_birth"
+                    name="date_of_birth"
+                    type="date"
+                    value="{{ form.date_of_birth.value|date:'Y-m-d'|default_if_none:'' }}"
+                />
+            </div>
+
+            <div class="md:col-span-2">
+                <label class="mb-2 block text-sm font-bold text-slate-700" for="id_address">Địa chỉ</label>
+                <textarea
+                    class="min-h-[100px] w-full rounded-xl border-slate-200 bg-white px-4 py-3 focus:border-indigo-400 focus:ring-indigo-200"
+                    id="id_address"
+                    name="address"
+                >{{ form.address.value|default_if_none:'' }}</textarea>
+            </div>
+        </div>
+
+        <div class="flex flex-wrap gap-3 pt-4 border-t border-slate-100">
+            <button
+                class="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-6 py-3 text-sm font-bold text-white transition-colors hover:bg-indigo-700"
+                type="submit"
+            >
+                Lưu thay đổi
+            </button>
+            <a
+                class="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-6 py-3 text-sm font-bold text-slate-600 transition-colors hover:bg-slate-100"
+                href="{% url 'admin_customer_list' %}"
+            >
+                Quay lại
+            </a>
+        </div>
+    </form>
+</section>
+{% endblock content %}

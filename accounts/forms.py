@@ -1,4 +1,4 @@
-﻿from django import forms
+from django import forms
 
 from accounts.models import Customer
 from banhang.sql_utils import fetch_one_dict
@@ -124,4 +124,24 @@ class RegisterForm(forms.Form):
             self.add_error("password2", "Mat khau xac nhan khong khop.")
 
         return cleaned_data
+
+
+class AdminCustomerForm(forms.ModelForm):
+    """
+    Form dùng cho Admin/Staff để chỉnh sửa thông tin cơ bản của khách hàng.
+    Không cho phép sửa username, password, email (email xử lý riêng hoặc lấy từ form này nếu ModelForm hỗ trợ, nhưng ở đây User chứa email, Customer chỉ chứa hồ sơ),
+    số dư ví, quyền admin.
+    """
+    email = forms.EmailField(required=True, label="Email")
+
+    class Meta:
+        model = Customer
+        fields = ['full_name', 'phone_number', 'address', 'gender', 'date_of_birth']
+        
+    def __init__(self, *args, **kwargs):
+        # Truyền user vào kwargs để lấy email hiện tại
+        user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        if user:
+            self.fields['email'].initial = user.email
 

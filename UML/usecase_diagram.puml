@@ -17,9 +17,12 @@ rectangle "Hệ thống Quản lý Bán hàng" {
     usecase "Đăng xuất" as UC_Logout
   }
 
-  package "Mua hàng và giỏ hàng" {
-    usecase "Xem sản phẩm" as UC_ViewProducts
+  package "Sản phẩm" {
+    usecase "Xem danh sách sản phẩm" as UC_ViewProducts
     usecase "Xem chi tiết sản phẩm" as UC_ViewDetail
+  }
+
+  package "Mua hàng và giỏ hàng" {
     usecase "Thêm sản phẩm vào giỏ" as UC_AddToCart
     usecase "Quản lý giỏ hàng" as UC_ManageCart
     usecase "Đặt hàng và thanh toán" as UC_Checkout
@@ -32,9 +35,21 @@ rectangle "Hệ thống Quản lý Bán hàng" {
     usecase "Duyệt yêu cầu nạp tiền" as UC_ApproveTopUp
   }
 
-  package "Quản trị hệ thống" {
-    usecase "Thêm sản phẩm" as UC_AddProduct
+  package "Quản trị sản phẩm" {
     usecase "Quản lý sản phẩm" as UC_ManageProduct
+    usecase "Thêm sản phẩm" as UC_AddProduct
+    usecase "Sửa sản phẩm" as UC_EditProduct
+    usecase "Xóa sản phẩm" as UC_DeleteProduct
+  }
+
+  package "Quản trị khách hàng" {
+    usecase "Quản lý khách hàng" as UC_ManageCustomer
+    usecase "Xem danh sách khách hàng" as UC_ViewCustomerList
+    usecase "Sửa thông tin khách hàng" as UC_EditCustomer
+    usecase "Khóa/Mở khóa tài khoản" as UC_ToggleCustomer
+  }
+
+  package "Quản trị đơn hàng và thống kê" {
     usecase "Xem danh sách đơn hàng" as UC_ManageOrders
     usecase "Xem thống kê bán hàng" as UC_ViewStats
   }
@@ -55,13 +70,31 @@ Customer --> UC_TopUpRequest
 
 Admin --> UC_Login
 Admin --> UC_Logout
-Admin --> UC_AddProduct
 Admin --> UC_ManageProduct
+Admin --> UC_ManageCustomer
 Admin --> UC_ManageOrders
 Admin --> UC_ApproveTopUp
 Admin --> UC_ViewStats
 
 UC_AddToCart ..> UC_ViewDetail : <<extend>>
-UC_Checkout ..> UC_ManageCart : <<extend>>
+UC_Checkout ..> UC_ManageCart : <<include>>
+
+UC_ManageProduct ..> UC_AddProduct : <<include>>
+UC_ManageProduct ..> UC_EditProduct : <<include>>
+UC_ManageProduct ..> UC_DeleteProduct : <<include>>
+
+UC_ManageCustomer ..> UC_ViewCustomerList : <<include>>
+UC_ManageCustomer ..> UC_EditCustomer : <<include>>
+UC_ManageCustomer ..> UC_ToggleCustomer : <<include>>
+
+note right of UC_ManageCustomer
+  Chỉ Admin/Staff được quản lý khách hàng.
+  Hệ thống không xóa khách hàng để tránh mất
+  dữ liệu đơn hàng, ví tiền và lịch sử nạp tiền.
+end note
+
+note right of UC_ToggleCustomer
+  Khóa/Mở khóa bằng trường User.is_active.
+end note
 
 @enduml

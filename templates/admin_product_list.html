@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+
+{% block title %}Quản lý sản phẩm - Sales Store{% endblock %}
+
+{% block content %}
+<div class="mb-8 flex items-center justify-between">
+    <div>
+        <h1 class="font-headline text-3xl font-extrabold text-slate-900">Quản lý sản phẩm</h1>
+        <p class="mt-2 text-sm text-slate-500">Danh sách tất cả sản phẩm trong hệ thống.</p>
+    </div>
+    <a href="{% url 'products:admin_product_create' %}" class="flex items-center gap-2 rounded-xl bg-indigo-600 px-6 py-3 text-sm font-bold text-white shadow-sm transition-all hover:bg-indigo-700 hover:shadow-md">
+        <span class="material-symbols-outlined text-sm">add</span>
+        Thêm sản phẩm
+    </a>
+</div>
+
+<div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm text-slate-600">
+            <thead class="bg-slate-50 text-xs uppercase text-slate-500">
+                <tr>
+                    <th scope="col" class="px-6 py-4 font-bold">Hình ảnh</th>
+                    <th scope="col" class="px-6 py-4 font-bold">Tên sản phẩm</th>
+                    <th scope="col" class="px-6 py-4 font-bold">Danh mục</th>
+                    <th scope="col" class="px-6 py-4 font-bold">Giá bán</th>
+                    <th scope="col" class="px-6 py-4 font-bold">Tồn kho</th>
+                    <th scope="col" class="px-6 py-4 font-bold text-right">Thao tác</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+                {% for product in products %}
+                <tr class="transition-colors hover:bg-slate-50">
+                    <td class="px-6 py-4">
+                        {% if product.image %}
+                        <img src="{{ product.image.url }}" alt="{{ product.product_name }}" class="h-12 w-12 rounded-lg object-cover border border-slate-200" />
+                        {% elif product.image_url %}
+                        <img src="{{ product.image_url }}" alt="{{ product.product_name }}" class="h-12 w-12 rounded-lg object-cover border border-slate-200" />
+                        {% else %}
+                        <div class="flex h-12 w-12 items-center justify-center rounded-lg bg-slate-100 text-slate-400">
+                            <span class="material-symbols-outlined">image</span>
+                        </div>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 font-medium text-slate-900">
+                        {{ product.product_name }}
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-800">
+                            {{ product.category }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="font-bold text-slate-900">{{ product.formatted_price }}</div>
+                        {% if product.discount_percent > 0 %}
+                        <div class="text-xs text-slate-400 line-through">{{ product.formatted_original_price }}</div>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4">
+                        {% if product.stock_quantity > 0 %}
+                        <span class="inline-flex items-center gap-1 rounded-full bg-green-50 px-2.5 py-0.5 text-xs font-medium text-green-700">
+                            <span class="h-1.5 w-1.5 rounded-full bg-green-500"></span>
+                            {{ product.stock_quantity }}
+                        </span>
+                        {% else %}
+                        <span class="inline-flex items-center gap-1 rounded-full bg-red-50 px-2.5 py-0.5 text-xs font-medium text-red-700">
+                            <span class="h-1.5 w-1.5 rounded-full bg-red-500"></span>
+                            Hết hàng
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 text-right">
+                        <div class="flex items-center justify-end gap-2">
+                            <a href="{% url 'products:detail' product.id %}" class="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600" title="Xem">
+                                <span class="material-symbols-outlined text-[20px]">visibility</span>
+                            </a>
+                            <a href="{% url 'products:admin_product_edit' product.id %}" class="rounded-lg p-2 text-indigo-400 transition-colors hover:bg-indigo-50 hover:text-indigo-600" title="Sửa">
+                                <span class="material-symbols-outlined text-[20px]">edit</span>
+                            </a>
+                            <a href="{% url 'products:admin_product_delete' product.id %}" class="rounded-lg p-2 text-red-400 transition-colors hover:bg-red-50 hover:text-red-600" title="Xóa">
+                                <span class="material-symbols-outlined text-[20px]">delete</span>
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="px-6 py-12 text-center text-slate-500">
+                        <div class="flex flex-col items-center justify-center">
+                            <span class="material-symbols-outlined mb-3 text-4xl text-slate-300">inventory_2</span>
+                            <p>Chưa có sản phẩm nào trong hệ thống.</p>
+                            <a href="{% url 'products:admin_product_create' %}" class="mt-4 text-sm font-semibold text-indigo-600 hover:text-indigo-700">Thêm sản phẩm đầu tiên</a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

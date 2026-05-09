@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Xác nhận xóa sản phẩm{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-2xl mt-12">
+    <div class="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">
+        <div class="border-b border-slate-200 bg-red-50 p-6 sm:p-8">
+            <div class="flex items-center gap-4">
+                <div class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-red-100 text-red-600">
+                    <span class="material-symbols-outlined text-2xl">warning</span>
+                </div>
+                <div>
+                    <h2 class="text-xl font-bold text-red-800">Xóa sản phẩm</h2>
+                    <p class="mt-1 text-sm text-red-600">Hành động này không thể hoàn tác.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="p-6 sm:p-8">
+            <p class="text-slate-700">
+                Bạn có chắc chắn muốn xóa sản phẩm <strong>"{{ product.product_name }}"</strong> không?
+            </p>
+            <p class="mt-2 text-sm text-slate-500">
+                Sản phẩm sẽ bị xóa khỏi hệ thống. Tuy nhiên, lịch sử các đơn hàng đã đặt trước đó vẫn sẽ được giữ lại.
+            </p>
+
+            <form method="post" class="mt-8 flex justify-end gap-3">
+                {% csrf_token %}
+                <a href="{% url 'products:detail' product.id %}" class="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-200 focus:ring-offset-2">
+                    Hủy bỏ
+                </a>
+                <button type="submit" class="inline-flex items-center justify-center rounded-xl bg-red-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2">
+                    Xác nhận xóa
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

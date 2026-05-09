@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block title %}Quản lý khách hàng - Sales Store{% endblock %}
+
+{% block content %}
+<div class="mb-8 flex items-center justify-between">
+    <div>
+        <h1 class="font-headline text-3xl font-extrabold text-slate-900">Quản lý khách hàng</h1>
+        <p class="mt-2 text-sm text-slate-500">Danh sách tất cả khách hàng trong hệ thống.</p>
+    </div>
+    <a href="{% url 'home' %}" class="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-6 py-3 text-sm font-bold text-slate-700 shadow-sm transition-all hover:bg-slate-50">
+        <span class="material-symbols-outlined text-sm">home</span>
+        Trang chủ
+    </a>
+</div>
+
+<div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm text-slate-600">
+            <thead class="bg-slate-50 text-xs uppercase text-slate-500">
+                <tr>
+                    <th scope="col" class="px-6 py-4 font-bold">ID</th>
+                    <th scope="col" class="px-6 py-4 font-bold">Tài khoản</th>
+                    <th scope="col" class="px-6 py-4 font-bold">Họ tên</th>
+                    <th scope="col" class="px-6 py-4 font-bold">Liên hệ</th>
+                    <th scope="col" class="px-6 py-4 font-bold">Số dư ví</th>
+                    <th scope="col" class="px-6 py-4 font-bold text-center">Trạng thái</th>
+                    <th scope="col" class="px-6 py-4 font-bold text-right">Thao tác</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+                {% for customer in customers %}
+                <tr class="transition-colors hover:bg-slate-50">
+                    <td class="px-6 py-4 font-medium text-slate-900">
+                        #{{ customer.id }}
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="font-bold text-slate-900">{{ customer.user.username }}</div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="font-bold text-slate-900">{{ customer.full_name }}</div>
+                        <div class="text-xs text-slate-500">{{ customer.get_gender_display }}</div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div>{{ customer.user.email|default:"Chưa có" }}</div>
+                        <div class="text-xs text-slate-500">{{ customer.phone_number }}</div>
+                    </td>
+                    <td class="px-6 py-4 font-bold text-indigo-700">
+                        {% if customer.wallet %}
+                            {{ customer.wallet.balance|default:0|stringformat:"d" }} đ
+                        {% else %}
+                            0 đ
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 text-center">
+                        {% if customer.user.is_active %}
+                        <span class="inline-flex items-center gap-1 rounded-full bg-green-50 px-2.5 py-0.5 text-xs font-medium text-green-700">
+                            <span class="h-1.5 w-1.5 rounded-full bg-green-500"></span>
+                            Hoạt động
+                        </span>
+                        {% else %}
+                        <span class="inline-flex items-center gap-1 rounded-full bg-red-50 px-2.5 py-0.5 text-xs font-medium text-red-700">
+                            <span class="h-1.5 w-1.5 rounded-full bg-red-500"></span>
+                            Bị khóa
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 text-right">
+                        <div class="flex items-center justify-end gap-2">
+                            <a href="{% url 'admin_customer_edit' customer.id %}" class="rounded-lg p-2 text-indigo-400 transition-colors hover:bg-indigo-50 hover:text-indigo-600" title="Sửa">
+                                <span class="material-symbols-outlined text-[20px]">edit</span>
+                            </a>
+                            <a href="{% url 'admin_customer_toggle_active' customer.id %}" class="rounded-lg p-2 transition-colors {% if customer.user.is_active %}text-red-400 hover:bg-red-50 hover:text-red-600{% else %}text-green-400 hover:bg-green-50 hover:text-green-600{% endif %}" title="{% if customer.user.is_active %}Khóa{% else %}Mở khóa{% endif %}">
+                                <span class="material-symbols-outlined text-[20px]">{% if customer.user.is_active %}lock{% else %}lock_open{% endif %}</span>
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="px-6 py-12 text-center text-slate-500">
+                        <div class="flex flex-col items-center justify-center">
+                            <span class="material-symbols-outlined mb-3 text-4xl text-slate-300">group</span>
+                            <p>Chưa có khách hàng nào trong hệ thống.</p>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

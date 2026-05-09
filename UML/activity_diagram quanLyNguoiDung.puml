@@ -1,0 +1,74 @@
+@startuml
+title Biểu đồ hoạt động - Admin/Staff quản lý khách hàng
+
+start
+
+partition "Admin/Staff" {
+  :Truy cập trang quản lý khách hàng;
+
+  if (Đã đăng nhập?) then (Có)
+
+    if (Là Admin/Staff?) then (Có)
+      :Hiển thị danh sách khách hàng;
+      :Chọn thao tác quản lý khách hàng;
+
+      if (Chọn sửa thông tin?) then (Có)
+        :Chọn khách hàng cần sửa;
+        :Hiển thị form sửa thông tin khách hàng;
+        :Cập nhật thông tin cơ bản;
+
+        note right
+          Chỉ sửa:
+          - họ tên
+          - email
+          - số điện thoại
+          - địa chỉ
+          - giới tính
+          - ngày sinh
+        end note
+
+        if (Dữ liệu hợp lệ?) then (Có)
+          :Cập nhật thông tin Customer;
+          :Cập nhật email trong User;
+          :Lưu thay đổi;
+          :Thông báo cập nhật thành công;
+          :Quay lại danh sách khách hàng;
+        else (Không)
+          :Hiển thị lỗi nhập liệu;
+          :Yêu cầu nhập lại;
+        endif
+
+      elseif (Chọn khóa/mở khóa?) then (Có)
+        :Chọn khách hàng cần khóa/mở khóa;
+
+        if (Tài khoản đang hoạt động?) then (Có)
+          :Đổi User.is_active = false;
+          :Khóa tài khoản khách hàng;
+        else (Không)
+          :Đổi User.is_active = true;
+          :Mở khóa tài khoản khách hàng;
+        endif
+
+        :Lưu thay đổi;
+        :Thông báo thao tác thành công;
+        :Quay lại danh sách khách hàng;
+
+      else (Không)
+        :Không thực hiện thay đổi;
+        :Quay lại trang quản trị;
+      endif
+
+    else (Không)
+      :Từ chối quyền truy cập;
+      :Chuyển về trang chủ;
+      stop
+    endif
+
+  else (Không)
+    :Chuyển đến trang đăng nhập;
+    stop
+  endif
+}
+
+stop
+@enduml

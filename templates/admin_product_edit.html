@@ -1,0 +1,211 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Admin - Sửa sản phẩm{% endblock %}
+
+{% block content %}
+      <nav class="mb-8 flex items-center gap-2 text-sm text-slate-500">
+        <a class="hover:text-indigo-600" href="{% url 'home' %}">Trang chủ</a>
+        <span class="material-symbols-outlined text-sm">chevron_right</span>
+        <a class="hover:text-indigo-600" href="{% url 'products:admin_product_list' %}">Quản lý sản phẩm</a>
+        <span class="material-symbols-outlined text-sm">chevron_right</span>
+        <span>Sửa sản phẩm</span>
+      </nav>
+
+      <section class="mb-8 rounded-2xl bg-gradient-to-r from-indigo-700 to-indigo-500 px-8 py-10 text-white flex justify-between items-center">
+        <div>
+            <h1 class="font-headline text-3xl font-extrabold md:text-4xl">Sửa sản phẩm: {{ product.product_name }}</h1>
+            <p class="mt-3 max-w-3xl text-indigo-100">
+            Form dành cho admin: cập nhật thông tin sản phẩm và ảnh.
+            </p>
+        </div>
+        <a href="{% url 'products:admin_product_delete' product.id %}" class="flex items-center gap-2 rounded-xl bg-red-500 px-4 py-2 text-sm font-bold text-white shadow-sm transition-all hover:bg-red-600 hover:shadow-md">
+            <span class="material-symbols-outlined text-sm">delete</span>
+            Xóa sản phẩm
+        </a>
+      </section>
+
+      <section class="rounded-2xl bg-white p-8 shadow-sm">
+        <form class="space-y-8" method="post" enctype="multipart/form-data">
+          {% csrf_token %}
+
+          <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+            <div class="md:col-span-2">
+              <label class="mb-2 block text-sm font-bold text-slate-700" for="product_name">Tên sản phẩm</label>
+              <input
+                class="w-full rounded-xl border-slate-200 bg-white px-4 py-3 focus:border-indigo-400 focus:ring-indigo-200"
+                id="product_name"
+                name="product_name"
+                type="text"
+                maxlength="255"
+                value="{{ product.product_name }}"
+                required
+              />
+            </div>
+
+            <div>
+              <label class="mb-2 block text-sm font-bold text-slate-700" for="category">Thể loại</label>
+              <input
+                class="w-full rounded-xl border-slate-200 bg-white px-4 py-3 focus:border-indigo-400 focus:ring-indigo-200"
+                id="category"
+                name="category"
+                type="text"
+                list="category-list"
+                value="{{ product.category }}"
+                required
+              />
+              <datalist id="category-list">
+                {% for category in category_options %}
+                <option value="{{ category }}"></option>
+                {% endfor %}
+              </datalist>
+            </div>
+
+            <div>
+              <label class="mb-2 block text-sm font-bold text-slate-700" for="stock_quantity">Số lượng</label>
+              <input
+                class="w-full rounded-xl border-slate-200 bg-white px-4 py-3 focus:border-indigo-400 focus:ring-indigo-200"
+                id="stock_quantity"
+                name="stock_quantity"
+                type="number"
+                min="0"
+                step="1"
+                value="{{ product.stock_quantity }}"
+                required
+              />
+            </div>
+
+            <div>
+              <label class="mb-2 block text-sm font-bold text-slate-700" for="price">Giá cả (VND)</label>
+              <input
+                class="w-full rounded-xl border-slate-200 bg-white px-4 py-3 focus:border-indigo-400 focus:ring-indigo-200"
+                id="price"
+                name="price"
+                type="number"
+                min="0"
+                step="0.01"
+                value="{{ product.price|stringformat:'f' }}"
+                required
+              />
+            </div>
+
+            <div>
+              <label class="mb-2 block text-sm font-bold text-slate-700" for="discount_percent">Giảm giá (%)</label>
+              <input
+                class="w-full rounded-xl border-slate-200 bg-white px-4 py-3 focus:border-indigo-400 focus:ring-indigo-200"
+                id="discount_percent"
+                name="discount_percent"
+                type="number"
+                min="0"
+                max="100"
+                step="0.01"
+                value="{{ product.discount_percent|stringformat:'f' }}"
+                required
+              />
+            </div>
+
+            <div>
+              <label class="mb-2 block text-sm font-bold text-slate-700" for="main_image">Hình ảnh chính mới (Tùy chọn)</label>
+              <input
+                class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm file:mr-4 file:rounded-lg file:border-0 file:bg-indigo-50 file:px-4 file:py-2 file:font-semibold file:text-indigo-700 hover:file:bg-indigo-100"
+                id="main_image"
+                name="main_image"
+                type="file"
+                accept="image/*"
+              />
+              <p class="mt-2 text-xs text-slate-500">Để trống nếu bạn không muốn thay đổi ảnh chính.</p>
+            </div>
+
+            <div class="md:col-span-2">
+              <label class="mb-2 block text-sm font-bold text-slate-700" for="gallery_images">
+                Thêm ảnh phụ mới (Tùy chọn)
+              </label>
+              <input
+                class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm file:mr-4 file:rounded-lg file:border-0 file:bg-indigo-50 file:px-4 file:py-2 file:font-semibold file:text-indigo-700 hover:file:bg-indigo-100"
+                id="gallery_images"
+                name="gallery_images"
+                type="file"
+                accept="image/*"
+                multiple
+              />
+            </div>
+
+            <div class="md:col-span-2">
+              <label class="mb-2 block text-sm font-bold text-slate-700" for="description">Mô tả sản phẩm</label>
+              <textarea
+                class="min-h-[140px] w-full rounded-xl border-slate-200 bg-white px-4 py-3 focus:border-indigo-400 focus:ring-indigo-200"
+                id="description"
+                name="description"
+              >{{ product.description|default:'' }}</textarea>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+            <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <p class="mb-3 text-sm font-bold text-slate-700">Xem trước ảnh chính (Mới chọn)</p>
+              <div class="flex aspect-video items-center justify-center overflow-hidden rounded-lg border-2 border-dashed border-slate-200 bg-white">
+                <img id="main-preview" alt="Main preview" class="hidden h-full w-full object-cover" />
+                <span id="main-placeholder" class="text-sm text-slate-400">
+                    {% if product.image %}
+                        <img src="{{ product.image.url }}" alt="{{ product.product_name }}" class="h-full w-full object-cover" />
+                    {% elif product.image_url %}
+                        <img src="{{ product.image_url }}" alt="{{ product.product_name }}" class="h-full w-full object-cover" />
+                    {% else %}
+                        Chưa chọn ảnh chính
+                    {% endif %}
+                </span>
+              </div>
+            </div>
+
+            <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <p class="mb-3 text-sm font-bold text-slate-700">Ảnh phụ hiện tại</p>
+              <div class="grid grid-cols-3 gap-3">
+                {% for img in product.images.all %}
+                <div class="aspect-square overflow-hidden rounded-lg border border-slate-200 bg-white">
+                    <img src="{{ img.image.url }}" alt="Gallery image" class="h-full w-full object-cover" />
+                </div>
+                {% empty %}
+                <div class="col-span-3 rounded-lg border-2 border-dashed border-slate-200 bg-white p-6 text-center text-sm text-slate-400">
+                  Chưa có ảnh phụ
+                </div>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap gap-3">
+            <button
+              class="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-6 py-3 text-sm font-bold text-white transition-colors hover:bg-indigo-700"
+              type="submit"
+            >
+              Lưu thay đổi
+            </button>
+            <a
+              class="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-6 py-3 text-sm font-bold text-slate-600 transition-colors hover:bg-slate-100"
+              href="{% url 'products:detail' product.id %}"
+            >
+              Hủy
+            </a>
+          </div>
+        </form>
+      </section>
+
+    <script>
+      const mainInput = document.getElementById("main_image");
+      const mainPreview = document.getElementById("main-preview");
+      const mainPlaceholder = document.getElementById("main-placeholder");
+
+      mainInput.addEventListener("change", () => {
+        const file = mainInput.files && mainInput.files[0];
+        if (!file) {
+          mainPreview.classList.add("hidden");
+          mainPlaceholder.classList.remove("hidden");
+          mainPreview.removeAttribute("src");
+          return;
+        }
+        mainPreview.src = URL.createObjectURL(file);
+        mainPreview.classList.remove("hidden");
+        mainPlaceholder.classList.add("hidden");
+      });
+    </script>
+{% endblock content %}
