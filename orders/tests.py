@@ -281,6 +281,155 @@ class CheckoutRoutePermissionSmokeTests(TestCase):
         self.assertEqual(buy_now_payload["data"]["checkout"]["source"], "BUY_NOW")
 
 
+class CartMutationTests(TestCase):
+    """Kiểm thử chi tiết cho các endpoint mutation của giỏ hàng."""
+
+    def setUp(self):
+        user_model = get_user_model()
+        self.user = user_model.objects.create_user(
+            username="cart_mutation_user",
+            email="cart_mutation_user@example.com",
+            password="testpass123",
+        )
+        self.customer = Customer.objects.create(
+            user=self.user,
+            full_name="Cart Mutation",
+            phone_number="0900123000",
+        )
+        self.cart = Cart.objects.create(customer=self.customer)
+
+        self.product_a = Product.objects.create(
+            product_name="Banh su kem",
+            category="Do an",
+            slug="banh-su-kem",
+            price=Decimal("20000.00"),
+            stock_quantity=5,
+        )
+        self.product_b = Product.objects.create(
+            product_name="Nuoc suoi",
+            category="Do uong",
+            slug="nuoc-suoi",
+            price=Decimal("10000.00"),
+            stock_quantity=2,
+        )
+
+        CartItem.objects.create(
+            cart=self.cart,
+            product=self.product_a,
+            quantity=2,
+            is_selected=True,
+        )
+
+        self.client.force_login(self.user)
+
+    def test_cart_add_success(self):
+        response = self.client.post(
+            reverse("cart_add"),
+            data={"product_id": self.product_b.id, "quantity": 1},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["ok"], True)
+        self.assertIn("vao gio hang", payload["message"])
+
+        item = CartItem.objects.get(cart=self.cart, product=self.product_b)
+        self.assertEqual(item.quantity, 1)
+        self.assertTrue(item.is_selected)
+
+    def test_cart_update_success(self):
+        response = self.client.post(
+            reverse("cart_update"),
+            data={"product_id": self.product_a.id, "quantity": 3},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["ok"], True)
+        self.assertIn("cap nhat", payload["message"])
+
+        item = CartItem.objects.get(cart=self.cart, product=self.product_a)
+        self.assertEqual(item.quantity, 3)
+
+    def test_cart_remove_success(self):
+        response = self.client.post(
+            reverse("cart_remove"),
+            data={"product_id": self.product_a.id},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["ok"], True)
+        self.assertIn("khoi gio hang", payload["message"])
+        self.assertFalse(CartItem.objects.filter(cart=self.cart, product=self.product_a).exists())
+
+    def test_cart_select_success(self):
+        response = self.client.post(
+            reverse("cart_select"),
+            data={"product_id": self.product_a.id, "is_selected": "false"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["ok"], True)
+        self.assertIn("bo chon", payload["message"])
+
+        item = CartItem.objects.get(cart=self.cart, product=self.product_a)
+        self.assertFalse(item.is_selected)
+
+    def test_cart_add_fails_when_quantity_not_positive(self):
+        response = self.client.post(
+            reverse("cart_add"),
+            data={"product_id": self.product_b.id, "quantity": 0},
+        )
+
+        self.assertEqual(response.status_code, 400)
+        payload = response.json()
+        self.assertEqual(payload["ok"], False)
+        self.assertEqual(payload["error"]["code"], "invalid_quantity")
+
+    def test_cart_update_fails_when_quantity_exceeds_stock(self):
+        response = self.client.post(
+            reverse("cart_update"),
+            data={"product_id": self.product_a.id, "quantity": 6},
+        )
+
+        self.assertEqual(response.status_code, 400)
+        payload = response.json()
+        self.assertEqual(payload["ok"], False)
+        self.assertEqual(payload["error"]["code"], "quantity_exceeds_stock")
+
+    def test_cart_add_fails_when_quantity_exceeds_stock(self):
+        response = self.client.post(
+            reverse("cart_add"),
+            data={"product_id": self.product_b.id, "quantity": 3},
+        )
+
+        self.assertEqual(response.status_code, 400)
+        payload = response.json()
+        self.assertEqual(payload["ok"], False)
+        self.assertEqual(payload["error"]["code"], "quantity_exceeds_stock")
+
+    def test_cart_add_requires_customer_profile(self):
+        user_model = get_user_model()
+        user_without_profile = user_model.objects.create_user(
+            username="no_customer_profile",
+            email="no_customer_profile@example.com",
+            password="testpass123",
+        )
+        self.client.force_login(user_without_profile)
+
+        response = self.client.post(
+            reverse("cart_add"),
+            data={"product_id": self.product_b.id, "quantity": 1},
+        )
+
+        self.assertEqual(response.status_code, 403)
+        payload = response.json()
+        self.assertEqual(payload["ok"], False)
+        self.assertEqual(payload["error"]["code"], "customer_profile_missing")
+
+
 class CheckoutPageRenderLoginRequiredSmokeTests(TestCase):
     """Smoke test cho trang render checkout/wallet/orders và guard login."""
 
@@ -360,6 +509,11 @@ class CheckoutPageRenderLoginRequiredSmokeTests(TestCase):
         cart_page = self._get_page_response("cart_checkout", {}, {"discount_code": "VIP50"})
         self.assertContains(cart_page, 'name="discount_code"')
         self.assertContains(cart_page, f'action="{reverse("cart_checkout")}"')
+        self.assertContains(cart_page, f'action="{reverse("cart_add")}"')
+        self.assertContains(cart_page, f'action="{reverse("cart_update")}"')
+        self.assertContains(cart_page, f'action="{reverse("cart_remove")}"')
+        self.assertContains(cart_page, f'action="{reverse("cart_select")}"')
+        self.assertContains(cart_page, 'name="next"')
 
         buy_now_page = self._get_page_response(
             "buy_now_checkout",

@@ -2,11 +2,14 @@ import json
 from decimal import Decimal, ROUND_HALF_UP
 from functools import wraps
 
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
+from django.utils.http import url_has_allowed_host_and_scheme
 
-from accounts.models import Customer, TopUpRequest
+from accounts.models import TopUpRequest
 from orders.models import Order
 from products.models import Cart, CartItem, Product
 
@@ -52,6 +55,39 @@ def _parse_request_data(request) -> dict:
             raise ValueError("Payload JSON khong hop le.") from exc
 
     return request.POST.dict()
+
+
+def _resolve_next_url(request, payload: dict) -> str | None:
+    if "application/json" in (request.content_type or ""):
+        return None
+
+    next_url = str(payload.get("next") or "").strip()
+    if not next_url:
+        return None
+
+    if url_has_allowed_host_and_scheme(
+        url=next_url,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ):
+        return next_url
+    return reverse("cart_checkout")
+
+
+def _respond_error(request, payload: dict, message: str, *, status: int = 400, code: str | None = None):
+    next_url = _resolve_next_url(request, payload)
+    if next_url:
+        messages.error(request, message)
+        return redirect(next_url)
+    return _json_error(message, status=status, code=code)
+
+
+def _respond_success(request, payload: dict, message: str, data: dict):
+    next_url = _resolve_next_url(request, payload)
+    if next_url:
+        messages.success(request, message)
+        return redirect(next_url)
+    return JsonResponse({"ok": True, "message": message, "data": data})
 
 
 def _parse_positive_int(data: dict, field_name: str) -> int | None:
@@ -138,7 +174,7 @@ def _ensure_post(request) -> JsonResponse | None:
 
 
 def _get_customer_or_error(request):
-    customer = Customer.objects.filter(user=request.user).first()
+    customer = getattr(request.user, "customer_profile", None)
     if customer is None:
         return None, _json_error(
             "Tai khoan chua co ho so khach hang.",
@@ -177,31 +213,53 @@ def cart_checkout(request):
         return error_response
 
     cart, _ = Cart.objects.get_or_create(customer=customer)
-    selected_items = cart.items.select_related("product").filter(is_selected=True).order_by("id")
+    all_items = cart.items.select_related("product").order_by("id")
 
-    item_rows = []
-    subtotal = Decimal("0")
-    for item in selected_items:
+    cart_rows = []
+    selected_rows = []
+    selected_subtotal = Decimal("0")
+
+    for item in all_items:
         line_subtotal = item.sub_total or Decimal("0")
-        subtotal += line_subtotal
-        item_rows.append(
-            {
-                "product_id": item.product_id,
-                "product_name": item.product.product_name,
-                "quantity": item.quantity,
-                "unit_price_display": _format_currency_vnd(item.product.discounted_price),
-                "line_subtotal_display": _format_currency_vnd(line_subtotal),
-            }
-        )
+        row = {
+            "product_id": item.product_id,
+            "product_name": item.product.product_name,
+            "quantity": item.quantity,
+            "stock_quantity": item.product.stock_quantity,
+            "is_selected": item.is_selected,
+            "unit_price_display": _format_currency_vnd(item.product.discounted_price),
+            "line_subtotal_display": _format_currency_vnd(line_subtotal),
+        }
+        cart_rows.append(row)
+
+        if item.is_selected:
+            selected_subtotal += line_subtotal
+            selected_rows.append(
+                {
+                    "product_id": item.product_id,
+                    "product_name": item.product.product_name,
+                    "quantity": item.quantity,
+                    "unit_price_display": _format_currency_vnd(item.product.discounted_price),
+                    "line_subtotal_display": _format_currency_vnd(line_subtotal),
+                }
+            )
 
     context = {
         "checkout_source": "CART",
-        "item_rows": item_rows,
-        "has_items": bool(item_rows),
-        "subtotal_display": _format_currency_vnd(subtotal),
+        "cart_rows": cart_rows,
+        "has_cart_items": bool(cart_rows),
+        "item_rows": selected_rows,
+        "has_items": bool(selected_rows),
+        "subtotal_display": _format_currency_vnd(selected_subtotal),
         "discount_code_input": (request.GET.get("discount_code") or "").strip(),
     }
     return render(request, "checkout_cart.html", context)
+
+
+def _stock_exceeds_message(requested_quantity: int, stock_quantity: int) -> str:
+    return (
+        f"So luong yeu cau ({requested_quantity}) vuot ton kho hien tai ({stock_quantity})."
+    )
 
 
 @purchase_flow_guard
@@ -236,7 +294,7 @@ def buy_now_checkout(request):
             if product is None:
                 error_message = "Khong tim thay san pham."
             elif quantity > product.stock_quantity:
-                error_message = "So luong vuot qua ton kho hien tai."
+                error_message = _stock_exceeds_message(quantity, product.stock_quantity)
             else:
                 line_subtotal = (product.discounted_price * Decimal(quantity)).quantize(
                     MONEY_QUANTIZE,
@@ -402,21 +460,47 @@ def cart_add(request):
 
     product_id = _parse_positive_int(payload, "product_id")
     if product_id is None:
-        return _json_error("product_id phai la so nguyen duong.", code="invalid_product_id")
+        return _respond_error(
+            request,
+            payload,
+            "product_id phai la so nguyen duong.",
+            code="invalid_product_id",
+        )
 
     quantity = payload.get("quantity", 1)
     try:
         quantity = int(quantity)
     except (TypeError, ValueError):
-        return _json_error("quantity phai la so nguyen duong.", code="invalid_quantity")
+        return _respond_error(
+            request,
+            payload,
+            "quantity phai la so nguyen duong lon hon 0.",
+            code="invalid_quantity",
+        )
     if quantity <= 0:
-        return _json_error("quantity phai la so nguyen duong.", code="invalid_quantity")
+        return _respond_error(
+            request,
+            payload,
+            "quantity phai la so nguyen duong lon hon 0.",
+            code="invalid_quantity",
+        )
 
     product = Product.objects.filter(pk=product_id).first()
     if product is None:
-        return _json_error("Khong tim thay san pham.", status=404, code="product_not_found")
+        return _respond_error(
+            request,
+            payload,
+            "Khong tim thay san pham.",
+            status=404,
+            code="product_not_found",
+        )
     if quantity > product.stock_quantity:
-        return _json_error("So luong vuot qua ton kho hien tai.", code="quantity_exceeds_stock")
+        return _respond_error(
+            request,
+            payload,
+            _stock_exceeds_message(quantity, product.stock_quantity),
+            code="quantity_exceeds_stock",
+        )
 
     cart, _ = Cart.objects.get_or_create(customer=customer)
     cart_item, created = CartItem.objects.get_or_create(
@@ -428,22 +512,28 @@ def cart_add(request):
         },
     )
 
-    if not created:
+    if created:
+        success_message = (
+            f'Da them "{product.product_name}" vao gio hang voi so luong {quantity}.'
+        )
+    else:
         next_quantity = cart_item.quantity + quantity
         if next_quantity > product.stock_quantity:
-            return _json_error("So luong vuot qua ton kho hien tai.", code="quantity_exceeds_stock")
+            return _respond_error(
+                request,
+                payload,
+                _stock_exceeds_message(next_quantity, product.stock_quantity),
+                code="quantity_exceeds_stock",
+            )
         cart_item.quantity = next_quantity
         cart_item.is_selected = True
         cart_item.full_clean()
         cart_item.save()
+        success_message = (
+            f'Da cap nhat "{product.product_name}" trong gio hang len so luong {next_quantity}.'
+        )
 
-    return JsonResponse(
-        {
-            "ok": True,
-            "message": "Da them san pham vao gio hang.",
-            "data": _cart_snapshot(cart),
-        }
-    )
+    return _respond_success(request, payload, success_message, _cart_snapshot(cart))
 
 
 @purchase_flow_guard
@@ -464,9 +554,19 @@ def cart_update(request):
     product_id = _parse_positive_int(payload, "product_id")
     quantity = _parse_positive_int(payload, "quantity")
     if product_id is None:
-        return _json_error("product_id phai la so nguyen duong.", code="invalid_product_id")
+        return _respond_error(
+            request,
+            payload,
+            "product_id phai la so nguyen duong.",
+            code="invalid_product_id",
+        )
     if quantity is None:
-        return _json_error("quantity phai la so nguyen duong.", code="invalid_quantity")
+        return _respond_error(
+            request,
+            payload,
+            "quantity phai la so nguyen duong lon hon 0.",
+            code="invalid_quantity",
+        )
 
     cart, _ = Cart.objects.get_or_create(customer=customer)
     cart_item = CartItem.objects.select_related("product").filter(
@@ -474,21 +574,29 @@ def cart_update(request):
         product_id=product_id,
     ).first()
     if cart_item is None:
-        return _json_error("San pham khong ton tai trong gio hang.", status=404, code="cart_item_not_found")
+        return _respond_error(
+            request,
+            payload,
+            "San pham khong ton tai trong gio hang.",
+            status=404,
+            code="cart_item_not_found",
+        )
     if quantity > cart_item.product.stock_quantity:
-        return _json_error("So luong vuot qua ton kho hien tai.", code="quantity_exceeds_stock")
+        return _respond_error(
+            request,
+            payload,
+            _stock_exceeds_message(quantity, cart_item.product.stock_quantity),
+            code="quantity_exceeds_stock",
+        )
 
     cart_item.quantity = quantity
     cart_item.full_clean()
     cart_item.save()
 
-    return JsonResponse(
-        {
-            "ok": True,
-            "message": "Da cap nhat so luong san pham trong gio hang.",
-            "data": _cart_snapshot(cart),
-        }
+    success_message = (
+        f'Da cap nhat "{cart_item.product.product_name}" thanh so luong {quantity}.'
     )
+    return _respond_success(request, payload, success_message, _cart_snapshot(cart))
 
 
 @purchase_flow_guard
@@ -508,19 +616,35 @@ def cart_remove(request):
 
     product_id = _parse_positive_int(payload, "product_id")
     if product_id is None:
-        return _json_error("product_id phai la so nguyen duong.", code="invalid_product_id")
+        return _respond_error(
+            request,
+            payload,
+            "product_id phai la so nguyen duong.",
+            code="invalid_product_id",
+        )
 
     cart, _ = Cart.objects.get_or_create(customer=customer)
-    deleted_count, _ = CartItem.objects.filter(cart=cart, product_id=product_id).delete()
-    if deleted_count == 0:
-        return _json_error("San pham khong ton tai trong gio hang.", status=404, code="cart_item_not_found")
+    cart_item = CartItem.objects.select_related("product").filter(
+        cart=cart,
+        product_id=product_id,
+    ).first()
+    if cart_item is None:
+        return _respond_error(
+            request,
+            payload,
+            "San pham khong ton tai trong gio hang.",
+            status=404,
+            code="cart_item_not_found",
+        )
 
-    return JsonResponse(
-        {
-            "ok": True,
-            "message": "Da xoa san pham khoi gio hang.",
-            "data": _cart_snapshot(cart),
-        }
+    product_name = cart_item.product.product_name
+    cart_item.delete()
+
+    return _respond_success(
+        request,
+        payload,
+        f'Da xoa "{product_name}" khoi gio hang.',
+        _cart_snapshot(cart),
     )
 
 
@@ -543,25 +667,43 @@ def cart_select(request):
     is_selected = _parse_bool(payload, "is_selected")
 
     if product_id is None:
-        return _json_error("product_id phai la so nguyen duong.", code="invalid_product_id")
+        return _respond_error(
+            request,
+            payload,
+            "product_id phai la so nguyen duong.",
+            code="invalid_product_id",
+        )
     if is_selected is None:
-        return _json_error("is_selected phai la bool.", code="invalid_is_selected")
+        return _respond_error(
+            request,
+            payload,
+            "is_selected phai la bool.",
+            code="invalid_is_selected",
+        )
 
     cart, _ = Cart.objects.get_or_create(customer=customer)
-    cart_item = CartItem.objects.filter(cart=cart, product_id=product_id).first()
+    cart_item = CartItem.objects.select_related("product").filter(
+        cart=cart,
+        product_id=product_id,
+    ).first()
     if cart_item is None:
-        return _json_error("San pham khong ton tai trong gio hang.", status=404, code="cart_item_not_found")
+        return _respond_error(
+            request,
+            payload,
+            "San pham khong ton tai trong gio hang.",
+            status=404,
+            code="cart_item_not_found",
+        )
 
     cart_item.is_selected = is_selected
-    cart_item.save()
+    cart_item.save(update_fields=["is_selected"])
 
-    return JsonResponse(
-        {
-            "ok": True,
-            "message": "Da cap nhat trang thai chon san pham.",
-            "data": _cart_snapshot(cart),
-        }
-    )
+    if is_selected:
+        success_message = f'Da chon "{cart_item.product.product_name}" cho checkout.'
+    else:
+        success_message = f'Da bo chon "{cart_item.product.product_name}" khoi checkout.'
+
+    return _respond_success(request, payload, success_message, _cart_snapshot(cart))
 
 
 @purchase_flow_guard
@@ -591,7 +733,7 @@ def buy_now_prepare(request):
     if product is None:
         return _json_error("Khong tim thay san pham.", status=404, code="product_not_found")
     if quantity > product.stock_quantity:
-        return _json_error("So luong vuot qua ton kho hien tai.", code="quantity_exceeds_stock")
+        return _json_error(_stock_exceeds_message(quantity, product.stock_quantity), code="quantity_exceeds_stock")
 
     line_subtotal = (product.discounted_price * Decimal(quantity)).quantize(
         MONEY_QUANTIZE,
