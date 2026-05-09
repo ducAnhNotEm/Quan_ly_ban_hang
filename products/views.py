@@ -1,7 +1,7 @@
 from django.shortcuts import get_object_or_404, render, redirect
 from django.contrib import messages
 
-from products.models import Product, ProductImage
+from products.models import Product
 
 """
 Module xử lý giao diện cho app `products`.
@@ -46,10 +46,7 @@ def admin_product_create(request):
                 image=main_image
             )
             
-            # Lưu các ảnh phụ (gallery) nếu có
-            gallery_images = request.FILES.getlist("gallery_images")
-            for img in gallery_images:
-                ProductImage.objects.create(product=product, image=img)
+
 
             messages.success(request, f"Đã thêm sản phẩm '{product_name}' thành công.")
             return redirect("home")
@@ -145,11 +142,6 @@ def admin_product_edit(request, product_id):
                 product.image = main_image
                 
             product.save()
-
-            gallery_images = request.FILES.getlist("gallery_images")
-            if gallery_images:
-                for img in gallery_images:
-                    ProductImage.objects.create(product=product, image=img)
 
             messages.success(request, f"Đã cập nhật sản phẩm '{product.product_name}' thành công.")
             return redirect("products:detail", product_id=product.id)

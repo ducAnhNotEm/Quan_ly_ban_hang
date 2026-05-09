@@ -115,20 +115,7 @@
               <p class="mt-2 text-xs text-slate-500">Khuyến nghị tỉ lệ 1:1 hoặc 4:3 để hiển thị đẹp trên danh sách.</p>
             </div>
 
-            <div class="md:col-span-2">
-              <label class="mb-2 block text-sm font-bold text-slate-700" for="gallery_images">
-                Ảnh phụ của sản phẩm (tối đa 6 ảnh)
-              </label>
-              <input
-                class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm file:mr-4 file:rounded-lg file:border-0 file:bg-indigo-50 file:px-4 file:py-2 file:font-semibold file:text-indigo-700 hover:file:bg-indigo-100"
-                id="gallery_images"
-                name="gallery_images"
-                type="file"
-                accept="image/*"
-                multiple
-              />
-              <p id="gallery-error" class="mt-2 hidden text-sm font-semibold text-red-600">Chỉ được chọn tối đa 6 ảnh phụ.</p>
-            </div>
+
 
             <div class="md:col-span-2">
               <label class="mb-2 block text-sm font-bold text-slate-700" for="description">Mô tả sản phẩm</label>
@@ -151,14 +138,7 @@
               </div>
             </div>
 
-            <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
-              <p class="mb-3 text-sm font-bold text-slate-700">Xem trước ảnh phụ</p>
-              <div id="gallery-preview" class="grid grid-cols-3 gap-3">
-                <div class="col-span-3 rounded-lg border-2 border-dashed border-slate-200 bg-white p-6 text-center text-sm text-slate-400">
-                  Chưa có ảnh phụ
-                </div>
-              </div>
-            </div>
+
           </div>
 
           {# Nút gửi và làm mới form. #}
@@ -182,11 +162,8 @@
     <script>
       // Lấy các phần tử cần dùng cho chức năng xem trước ảnh.
       const mainInput = document.getElementById("main_image");
-      const galleryInput = document.getElementById("gallery_images");
       const mainPreview = document.getElementById("main-preview");
       const mainPlaceholder = document.getElementById("main-placeholder");
-      const galleryPreview = document.getElementById("gallery-preview");
-      const galleryError = document.getElementById("gallery-error");
 
       // Khi chọn ảnh chính: hiển thị xem trước, hoặc làm mới nếu bỏ chọn file.
       mainInput.addEventListener("change", () => {
@@ -200,41 +177,6 @@
         mainPreview.src = URL.createObjectURL(file);
         mainPreview.classList.remove("hidden");
         mainPlaceholder.classList.add("hidden");
-      });
-
-      // Khi chọn ảnh phụ: giới hạn tối đa 6 ảnh, và hiển thị xem trước dạng lưới.
-      galleryInput.addEventListener("change", () => {
-        const files = Array.from(galleryInput.files || []);
-        galleryPreview.innerHTML = "";
-
-        if (files.length > 6) {
-          galleryError.classList.remove("hidden");
-          galleryInput.value = "";
-          galleryPreview.innerHTML =
-            '<div class="col-span-3 rounded-lg border-2 border-dashed border-slate-200 bg-white p-6 text-center text-sm text-slate-400">Chưa có ảnh phụ</div>';
-          return;
-        }
-
-        galleryError.classList.add("hidden");
-
-        if (!files.length) {
-          galleryPreview.innerHTML =
-            '<div class="col-span-3 rounded-lg border-2 border-dashed border-slate-200 bg-white p-6 text-center text-sm text-slate-400">Chưa có ảnh phụ</div>';
-          return;
-        }
-
-        files.forEach((file) => {
-          const cell = document.createElement("div");
-          cell.className = "aspect-square overflow-hidden rounded-lg border border-slate-200 bg-white";
-
-          const img = document.createElement("img");
-          img.src = URL.createObjectURL(file);
-          img.alt = file.name;
-          img.className = "h-full w-full object-cover";
-
-          cell.appendChild(img);
-          galleryPreview.appendChild(cell);
-        });
       });
     </script>
 {% endblock content %}

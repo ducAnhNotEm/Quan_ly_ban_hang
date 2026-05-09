@@ -3,6 +3,7 @@ title Biểu đồ lớp - Hệ thống quản lý bán hàng Django
 
 skinparam classAttributeIconSize 0
 hide empty members
+left to right direction
 
 class User <<Django Auth>> {
   - id: int
@@ -46,13 +47,6 @@ class Product {
   - image: ImageField?
   - image_url: URLField?
   - created_at: datetime
-  - updated_at: datetime
-}
-
-class ProductImage {
-  - id: int
-  - image: ImageField
-  - created_at: datetime
 }
 
 class Cart {
@@ -65,6 +59,8 @@ class CartItem {
   - id: int
   - quantity: int
   - is_selected: bool
+  - sub_total: decimal
+  - discount_amount: decimal
 }
 
 class Order {
@@ -86,32 +82,55 @@ class OrderDetail {
   - sub_total: decimal(12,2)
 }
 
-User "1" -- "0..1" Customer : có hồ sơ khách hàng
-Customer "1" -- "0..1" Wallet : sở hữu ví
-Customer "1" -- "0..*" TopUpRequest : gửi yêu cầu nạp tiền
-Customer "1" -- "0..1" Cart : có giỏ hàng
+' =====================
+' Nhóm tài khoản - khách hàng
+' =====================
 
+User "1" -- "0..1" Customer : hồ sơ
+Customer "1" -- "1" Wallet : ví tiền
+Customer "1" -- "0..*" TopUpRequest : yêu cầu nạp tiền
+
+' =====================
+' Nhóm giỏ hàng
+' =====================
+
+Customer "1" -- "0..1" Cart : giỏ hàng
 Cart "1" -- "0..*" CartItem : chứa
-Product "1" -- "0..*" CartItem : được thêm vào giỏ
+Product "1" -- "0..*" CartItem : trong giỏ
 
-Customer "1" -- "0..*" Order : đặt
+' =====================
+' Nhóm đơn hàng
+' =====================
+
+Customer "1" -- "0..*" Order : đặt hàng
 Order "1" -- "1..*" OrderDetail : gồm
-Product "1" -- "0..*" OrderDetail : xuất hiện trong
+Product "1" -- "0..*" OrderDetail : được mua
 
-Product "1" -- "0..*" ProductImage : có ảnh phụ
+' =====================
+' Quyền quản trị
+' =====================
 
-User "1" -- "0..*" Product : Admin/Staff quản lý
+User ..> Product : Admin/Staff quản lý
+User ..> Customer : Admin/Staff quản lý
+User ..> TopUpRequest : Admin/Staff duyệt
 
 note right of User
-  Nếu is_staff = true:
-  người dùng có quyền quản trị
-  sản phẩm, đơn hàng và yêu cầu nạp tiền.
+  is_staff = true:
+  có quyền quản trị.
+
+  is_active = false:
+  tài khoản bị khóa.
 end note
 
-note right of Product
+note bottom of Product
+  Mỗi sản phẩm chỉ có 1 ảnh chính.
+  Ảnh lưu trong media,
+  đường dẫn ảnh lưu trong MySQL.
+end note
+
+note bottom of Customer
   Admin/Staff có thể:
-  - thêm sản phẩm
-  - sửa thông tin sản phẩm
-  - xóa sản phẩm
+  xem, sửa, khóa/mở khóa
+  hoặc xóa khách hàng.
 end note
 @enduml
